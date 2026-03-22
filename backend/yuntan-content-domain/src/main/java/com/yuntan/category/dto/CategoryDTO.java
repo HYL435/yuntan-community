@@ -1,0 +1,45 @@
+package com.yuntan.category.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+
+/**
+ * 分类实体类
+ */
+@Data
+@Schema(description = "分类实体")
+public class CategoryDTO {
+
+    /**
+     * 分类名称
+     */
+    @Schema(
+            description = "分类名称",
+            example = "技术分享",
+            requiredMode = Schema.RequiredMode.REQUIRED,
+            maxLength = 100
+    )
+    private String categoryName;
+
+    /**
+     * 排序权重，值越大越靠前
+     */
+    @Schema(
+            description = "排序权重，值越大越靠前",
+            example = "100",
+            defaultValue = "0"
+    )
+    private Long sort;
+
+    /**
+     * 状态：0-禁用，1-启用
+     */
+    @Schema(
+            description = "状态：0-禁用，1-启用",
+            example = "1",
+            allowableValues = {"0", "1"},
+            defaultValue = "1"
+    )
+    private Integer status;
+
+}

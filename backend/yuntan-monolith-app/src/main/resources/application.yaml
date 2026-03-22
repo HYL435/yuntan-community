@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: yuntan-community
+  profiles:
+    active: dev
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 50MB
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+server:
+  port: 8081
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.yuntan.**.po
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      field-strategy: not_empty
+
+project:
+  name: 云坛社区
+  file-domain: http://yuntan-blog.top
+  default-page-size: 10
+  max-page-size: 100
+
+logging:
+  level:
+    root: info
+    com.yuntan.community: debug
+    org.mybatis: debug
+    com.baomidou.mybatisplus: info
+    org.springframework.web: info
+  file:
+    path: logs
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"

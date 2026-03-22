@@ -1,0 +1,21 @@
+/mvnw text eol=lf
+*.cmd text eol=crlf
+# 设置文本文件的换行符自动转换
+* text=auto
+
+# 强制某些类型文件使用特定换行符
+*.sh text eol=lf
+*.bat text eol=crlf
+*.java text
+*.kt text
+*.py text
+*.md text
+
+# 二进制文件不要做换行符转换
+*.jar binary
+*.war binary
+*.ear binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary

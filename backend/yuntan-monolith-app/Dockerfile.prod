@@ -1,0 +1,13 @@
+# backend/yuntan-monolith-app/Dockerfile.prod
+FROM 3.9.12-eclipse-temurin-21 AS builder
+
+WORKDIR /app
+
+# 复制已构建好的 jar（建议 Maven 打包到 target/）
+COPY target/yuntan-monolith-app.jar app.jar
+
+# 暴露端口
+EXPOSE 8080
+
+# 生产环境启动命令
+ENTRYPOINT ["java", "-Xms512m", "-Xmx1024m", "-jar", "app.jar"]

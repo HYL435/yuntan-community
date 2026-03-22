@@ -1,0 +1,241 @@
+# =======================
+# Java / Spring Boot
+# =======================
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Gradle（如果有）
+.gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Kotlin
+.kotlin/
+
+# Logs
+logs/
+*.log
+
+# =======================
+# IntelliJ IDEA
+# =======================
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# 如果你想保留 run 配置可以单独放行
+!.idea/runConfigurations/
+
+# =======================
+# Eclipse
+# =======================
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# =======================
+# NetBeans
+# =======================
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# =======================
+# VS Code
+# =======================
+.vscode/
+
+# =======================
+# OS 文件
+# =======================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# =======================
+# Python
+# =======================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 虚拟环境
+venv/
+env/
+.venv/
+
+# 打包
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# =======================
+# Node / 前端（你项目很可能用到）
+# =======================
+node_modules/
+dist/
+build/
+.npm/
+.yarn/
+.pnpm-store/
+
+# Vite / Webpack
+.cache/
+.eslintcache
+
+# =======================
+# Docker
+# =======================
+*.pid
+*.seed
+*.pid.lock
+
+docker-compose.override.yml
+
+# =======================
+# 环境配置（非常重要）
+# =======================
+.env
+.env.*
+*.local
+
+# Spring Boot 配置（如果含敏感信息）
+application-dev.yml
+application-prod.yml
+application-local.yml
+
+# =======================
+# 数据库 / 缓存
+# =======================
+*.sql
+*.db
+*.sqlite
+*.sqlite3
+
+# Redis dump
+dump.rdb
+
+# =======================
+# 临时文件
+# =======================
+tmp/
+temp/
+*.swp
+*.swo
+
+# =======================
+# 压缩包
+# =======================
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+
+# =======================
+# 日志 & 运行时文件
+# =======================
+*.out
+*.err
+
+# =======================
+# 证书 & 密钥（极重要）
+# =======================
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+
+# =======================
+# Mac / Windows 额外
+# =======================
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# =======================
+# Coverage / 测试
+# =======================
+coverage/
+*.lcov
+
+# =======================
+# AI / 临时工具（可选）
+# =======================
+.cache/
+tmp/
+
+# =======================
+# MySQL 数据目录（必须忽略）
+# =======================
+deploy/data/mysql/
+*.sock
+*.pid
+*.err
+ibdata*
+*.ibd
+*.frm
+*.log
+
+# =======================
+# Spring Boot 配置文件（如果含敏感信息）
+# =======================
+application-dev.yaml
+application-prod.yaml
+
+# =======================
+# Docker 运行数据（强制忽略）
+# =======================
+deploy/data/
+
+# 如果你想保留目录结构（可选）
+!deploy/data/.gitkeep
+
+# =======================
+# MySQL / Redis / ES 细化（防误提交）
+# =======================
+deploy/data/mysql/
+deploy/data/redis/
+deploy/data/es/
+
+# socket / runtime
+*.sock
+*.pid
+*.err
+
+# ES 数据
+deploy/data/es/nodes/
+deploy/data/es/_state/
+deploy/data/es/indices/
+deploy/data/es/snapshot_cache/
+
+# Redis
+dump.rdb
+
+# =======================
+# Docker 环境变量（敏感）
+# =======================
+deploy/docker/.env

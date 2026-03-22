@@ -1,0 +1,133 @@
+services:
+  # ======================
+  # MySQL
+  # ======================
+  mysql:
+    image: mysql:8.0.36
+    container_name: mysql
+    env_file:
+      - .env
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../data/mysql:/var/lib/mysql
+    networks:
+      - yuntan-network
+    restart: unless-stopped
+
+  # ======================
+  # Redis
+  # ======================
+  redis:
+    image: redis:8.4
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ../data/redis:/data
+    networks:
+      - yuntan-network
+    restart: unless-stopped
+
+  # ======================
+  # Elasticsearch
+  # ======================
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.12
+    container_name: es
+    env_file:
+      - .env
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+      - ../data/es:/usr/share/elasticsearch/data
+    networks:
+      - yuntan-network
+    restart: unless-stopped
+
+  # ======================
+  # Python AI 服务
+  # ======================
+  ai-service:
+    build:
+      context: ../../ai-service
+      dockerfile: Dockerfile.prod
+    container_name: ai-service
+    volumes:
+      - ../data:/data
+    ports:
+      - "${AI_PORT}:5000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - yuntan-network
+    restart: unless-stopped
+
+  # ======================
+  # Spring Boot 后端
+  # ======================
+  backend:
+    build:
+      context: ../../backend/yuntan-monolith-app
+      dockerfile: Dockerfile.prod
+    container_name: backend
+    volumes:
+      - ../data:/data
+    ports:
+      - "${SPRING_PORT}:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
+      - REDIS_HOST=redis
+      - ELASTICSEARCH_HOST=http://es:9200
+    depends_on:
+      - mysql
+      - redis
+      - es
+    networks:
+      - yuntan-network
+    restart: unless-stopped
+
+  # ======================
+  # Nginx
+  # ======================
+  nginx:
+    image: nginx:stable-perl
+    container_name: nginx
+    ports:
+      - "${NGINX_PORT}:80"
+    volumes:
+      - ../../deploy/nginx:/etc/nginx/conf.d
+      - ../data:/data
+    depends_on:
+      - backend
+      - ai-service
+    networks:
+      - yuntan-network
+    restart: unless-stopped
+
+# ======================
+# 数据卷
+# ======================
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  es_data:
+    driver: local
+
+# ======================
+# 网络配置
+# ======================
+networks:
+  yuntan-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

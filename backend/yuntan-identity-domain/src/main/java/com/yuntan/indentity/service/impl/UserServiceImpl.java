@@ -1,0 +1,515 @@
+package com.yuntan.indentity.service.impl;
+
+import cn.hutool.core.util.RandomUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.yuntan.dto.UserCommentDTO;
+import com.yuntan.indentity.dto.*;
+import com.yuntan.indentity.entity.User;
+import com.yuntan.indentity.mapper.UserMapper;
+import com.yuntan.indentity.query.UserPageQuery;
+import com.yuntan.indentity.service.IUserService;
+import com.yuntan.indentity.utils.JwtUtil;
+import com.yuntan.indentity.utils.TokenBlacklistUtil;
+import com.yuntan.indentity.utils.TokenResolveUtil;
+import com.yuntan.indentity.utils.UserCheckUtil;
+import com.yuntan.indentity.vo.UserLoginVO;
+import com.yuntan.indentity.vo.UserVO;
+import com.yuntan.infra.oss.OssUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
+import yuntan.common.constant.*;
+import yuntan.common.domain.EmailMsgDTO;
+import yuntan.common.exception.BusinessException;
+import yuntan.common.utils.BeanUtils;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
+
+    // 密码加密工具
+    private final BCryptPasswordEncoder passwordEncoder;
+    // 用户校验工具
+    private final UserCheckUtil userCheckUtil;
+    // 令牌校验工具
+    private final JwtUtil jwtUtil;
+    // mapper
+    private final UserMapper userMapper;
+    // OSS 工具类
+    private final OssUtil userOssUtil;
+    // token黑名单工具
+    private final TokenBlacklistUtil tokenBlacklistUtil;
+    // token解析工具
+    private final TokenResolveUtil tokenResolveUtil;
+    // RedisTemplate 用于验证码存储
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    /**
+     * 用户注册
+     */
+    @Override
+    public UserLoginVO registerUser(UserRegisterDTO userRegisterDTO) {
+
+        User user = BeanUtils.copyBean(userRegisterDTO, User.class);
+
+        // 参数校验
+        userCheckUtil.userRegisterChack(user);
+
+        // 唯一性验证
+        if (isEmailExist(user.getEmail())) {
+            throw BusinessException.emailExist();
+        }
+        // 校验用户名是否已存在
+        if (isUsernameExist(user.getUsername())) {
+            throw BusinessException.usernameExist();
+        }
+
+        // 密码加密（使用 BCrypt）
+        user.setPassword(encryptedPassword(user.getPassword()));
+
+        // 设置默认值（默认昵称为邮箱）
+        setDefaultValues(user);
+
+        // 数据清洗
+        user.setUsername(user.getUsername().trim());
+        user.setEmail(user.getEmail().trim());
+
+        // 落库
+        this.save(user);
+
+        // 生成jwt令牌返回给前端，自动登录
+        String token = jwtUtil.createToken(user.getRole(), user.getId());
+
+        // 将用户注册信息转换为VO返回
+        UserLoginVO userLoginVO = BeanUtils.copyBean(user, UserLoginVO.class);
+        userLoginVO.setId(user.getId());
+        userLoginVO.setToken(token);
+
+        // TODO 发送注册成功的邮件通知
+
+        return userLoginVO;
+    }
+
+    /**
+     * 用户登录
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UserLoginVO loginUser(UserLoginDTO userLoginDTO) {
+
+        User user = BeanUtils.copyBean(userLoginDTO, User.class);
+        // 参数校验
+        userCheckUtil.userLoginChack(user);
+
+        // 根据用户名或邮箱查询用户
+        UserLoginVO userLoginVO = selectUserByInfo(user);
+
+        // 账号状态校验
+        if (Objects.equals(userLoginVO.getStatus(), StatusConstant.DISABLE)) {
+            throw new BusinessException(MessageConstant.ACCOUNT_LOCKED);
+        }
+
+        return userLoginVO;
+    }
+
+    /**
+     * 根据用户ID获取用户信息
+     */
+    @Override
+    public UserVO getUserById(Long id) {
+
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getId, id)
+                .eq(User::getDeleted, DeleteStatusConstant.NOT_DELETED);
+
+        User userInfo = this.getOne(wrapper);
+
+        UserVO userVO = BeanUtils.copyBean(userInfo, UserVO.class);
+
+        if (userVO == null) {
+            throw new BusinessException(MessageConstant.USER_NOT_FOUND);
+        }
+
+        return userVO;
+    }
+
+    /**
+     * 修改用户信息
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void reviseUserInfo(UserDTO userDTO) {
+
+        User user = BeanUtils.copyBean(userDTO, User.class);
+
+        // 参数校验
+        userCheckUtil.reviseUserInfoCheck(user);
+
+        // 数据清洗
+        if (StringUtils.hasText(user.getNickname())) {
+            user.setNickname(user.getNickname().trim());
+        }
+        if (StringUtils.hasText(user.getImage())) {
+            user.setImage(user.getImage().trim());
+        }
+
+        try {
+            // 获取原用户
+            User oldUser = this.getById(user.getId());
+            if (oldUser == null) {
+                throw new BusinessException(MessageConstant.USER_NOT_FOUND);
+            }
+
+            // ✅ 只有原头像存在且不是默认头像时才删除
+            if (StringUtils.hasText(oldUser.getImage())
+                    && !oldUser.getImage().contains("default-avatar.jpg")) {
+                try {
+                    userOssUtil.deleteFile(oldUser.getImage());
+                } catch (Exception e) {
+                    // 删除失败时，不影响主流程，记录错误
+                    log.warn("删除旧头像失败: {}");
+                }
+            }
+
+            // 上传新头像
+            if (userDTO.getImageFile() != null) {
+                String image = userOssUtil.uploadFile(userDTO.getImageFile(), FilePathConstant.USER_AVATAR_PATH);
+                user.setImage(image);
+            }
+
+        } catch (IOException e) {
+            // 捕获OSS相关的异常，提示上传失败
+            throw new BusinessException(MessageConstant.UPLOAD_FAILED);
+        }
+
+        // 更新用户信息
+        this.updateById(user);
+    }
+
+
+
+    /**
+     * 修改用户密码
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void reviseUserPassword(UpdateUserPwdDTO updateUserPwdDTO) {
+
+        // 参数校验
+        userCheckUtil.reviseUserPasswordCheck(updateUserPwdDTO);
+
+        // 获取用户信息
+        User oldUser = this.getById(updateUserPwdDTO.getId());
+
+        // 校验旧密码是否正确
+        if (!passwordEncoder.matches(updateUserPwdDTO.getOldPassword(), oldUser.getPassword())) {
+            throw BusinessException.badRequest(MessageConstant.OLD_PASSWORD_INCORRECT);
+        }
+
+        // 加密新密码
+        String newEncryptedPassword = encryptedPassword(updateUserPwdDTO.getNewPassword());
+
+        // 更新密码
+        User updateUser = User.builder()
+                .id(updateUserPwdDTO.getId())
+                .password(newEncryptedPassword).build();
+        this.updateById(updateUser);
+
+    }
+
+    /**
+     * TODO 用户忘记密码
+     */
+    @Override
+    public void forgetUserPassword(ForgetUserPwdDTO forgetUserPwdDTO) throws Exception {
+
+        // 参数校验
+        userCheckUtil.forgetUserPasswordCheck(forgetUserPwdDTO);
+        // 验证邮箱是否存在
+        if (!isEmailExist(forgetUserPwdDTO.getEmail())) {
+            throw BusinessException.emailNotExist(forgetUserPwdDTO.getEmail());
+        }
+
+        // 1. 从 Redis 获取验证码
+        String redisKey = "code:reset:" + forgetUserPwdDTO.getEmail();
+        String cachedCode = (String) redisTemplate.opsForValue().get(redisKey);
+
+        // 2. 校验
+        if (cachedCode == null) {
+            throw new RuntimeException("验证码已过期，请重新获取");
+        }
+        if (!cachedCode.equals(forgetUserPwdDTO.getCode())) {
+            throw new RuntimeException("验证码错误");
+        }
+
+
+        // 加密新密码
+        String newEncryptedPassword = encryptedPassword(forgetUserPwdDTO.getNewPassword());
+
+        // 更新密码
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getEmail, forgetUserPwdDTO.getEmail().trim())
+                .eq(User::getDeleted, DeleteStatusConstant.NOT_DELETED);
+
+        User updateUser = User.builder()
+                .password(newEncryptedPassword)
+                .build();
+
+        this.update(updateUser, wrapper);
+    }
+
+    /**
+     * 用户登出
+     */
+    @Override
+    public void logoutUser(HttpServletRequest request) {
+
+        // 1. 从请求头中提取Token
+        String token = tokenResolveUtil.extractTokenFromHeader(request);
+
+        // 连接Redis将token加入黑名单
+        tokenBlacklistUtil.addLogoutToken(token);
+
+        // 判断是否存入成功
+        if (!tokenBlacklistUtil.isLogoutToken(token)) {
+            throw BusinessException.internalError(MessageConstant.LOGOUT_FAILED);
+        }
+
+    }
+
+    /**
+     * 启用或禁用用户
+     */
+    @Override
+    public void enableOrDisableUser(Long id, Integer status) {
+
+        status = Objects.equals(status, StatusConstant.DISABLE) ? StatusConstant.ENABLE : StatusConstant.DISABLE;
+
+
+        // 创建用户对象
+        User user = User.builder()
+                .id(id)
+                .status(status)
+                .build();
+
+        // 更新用户状态
+        this.updateById(user);
+
+    }
+
+    /**
+     * 升级用户为管理员
+     */
+    @Override
+    public void upgradeAdmin(UserRoleDTO userRoleDTO) {
+
+        // 创建用户对象
+        User user = User.builder()
+                .id(userRoleDTO.getId())
+                .role(userRoleDTO.getRole())
+                .build();
+
+        // 更新用户角色
+        this.updateById(user);
+
+    }
+
+    /**
+     * 获取用户评论
+     */
+    @Override
+    public UserCommentDTO getUserComment(Long id) {
+
+        User user = this.getById(id);
+
+        return BeanUtils.copyBean(user, UserCommentDTO.class);
+    }
+
+    /**
+     * 分页查询用户列表
+     */
+    @Override
+    public Page<User> userPage(UserPageQuery userPageQuery) {
+
+        return this.page(
+                userPageQuery.toMpPage(
+                        userPageQuery.getSortBy(),
+                        userPageQuery.getIsAsc()
+                ),
+                userPageQuery.toWrapper()
+        );
+    }
+
+    /**
+     * 批量获取用户评论
+     */
+    @Override
+    public List<UserCommentDTO> getUserComments(Set<Long> userIds) {
+        // 1. 判空
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 2. 查数据库
+        List<User> users = userMapper.selectByIds(userIds);
+
+        if (users == null || users.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 3. 转换并【手动赋值 ID】
+        // 这一步是修复 "未知用户" 的关键！
+        return users.stream().map(user -> {
+            UserCommentDTO dto = new UserCommentDTO();
+            // 拷贝 username, nickname, image 等同名字段
+            BeanUtils.copyProperties(user, dto);
+
+            // 【关键修复】手动把 User 的 id 赋值给 DTO 的 userId
+            // 因为 BeanUtils 无法自动把 id 拷贝给 userId
+            dto.setUserId(user.getId());
+
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 发送邮箱验证码
+     */
+    @Override
+    public void sendEmailCode(String email) throws Exception {
+
+        // 验证邮箱格式
+        userCheckUtil.emailCheck(email);
+
+        // 验证邮箱是否存在
+        if (!isEmailExist(email)) {
+            throw BusinessException.emailNotExist(email);
+        }
+
+        // 生成验证码
+        String code = RandomUtil.randomNumbers(6);
+
+        // 将验证码存入Redis，设置过期时间（例如5分钟）
+        String redisKey = "email:code:" + email.trim();
+        redisTemplate.opsForValue().set(redisKey, code, 5, java.util.concurrent.TimeUnit.MINUTES);
+
+        // 封装消息对象
+        EmailMsgDTO emailMsgDTO = new EmailMsgDTO(email, code, 2);
+
+        // TODO 发送验证码邮件
+    }
+
+
+    // 根据用户名或邮箱查询用户
+    private UserLoginVO selectUserByInfo(User user) {
+        String usernameOrEmail = StringUtils.hasText(user.getUsername())
+                ? user.getUsername()
+                : user.getEmail();
+
+        if (!StringUtils.hasText(usernameOrEmail)) {
+            throw BusinessException.badRequest("用户名或邮箱不能为空");
+        }
+
+        // 1. 先根据用户名或邮箱查询用户（不比较密码）
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.and(i -> i.eq(User::getUsername, usernameOrEmail.trim())
+                        .or()
+                        .eq(User::getEmail, usernameOrEmail.trim()))
+                .eq(User::getDeleted, DeleteStatusConstant.NOT_DELETED);
+
+        // 执行查询
+        User loginUser = this.getOne(wrapper);
+
+        // 若用户存在，更新最后登录时间
+        if (!ObjectUtils.isEmpty(loginUser)) {
+            // 设置最后登录时间
+            loginUser.setLastLoginTime(LocalDateTime.now());
+            // 执行更新（仅更新修改的字段，推荐用updateById）
+            this.updateById(loginUser);
+        }
+        if (loginUser == null) {
+            throw BusinessException.badRequest(MessageConstant.ACCOUNT_OR_PASSWORD_ERROR);
+        }
+
+        // 2. 使用 matches() 方法验证密码
+        if (!passwordEncoder.matches(user.getPassword(), loginUser.getPassword())) {
+            throw BusinessException.badRequest(MessageConstant.ACCOUNT_OR_PASSWORD_ERROR);
+        }
+
+        // 3. 账号状态校验
+        if (Objects.equals(loginUser.getStatus(), StatusConstant.DISABLE)) {
+            throw new BusinessException(MessageConstant.ACCOUNT_LOCKED);
+        }
+
+        // 4. 生成令牌
+        String token = jwtUtil.createToken(loginUser.getRole(), loginUser.getId());
+
+        // 5. 转换为VO
+        UserLoginVO userLoginVO = BeanUtils.copyBean(loginUser, UserLoginVO.class);
+        userLoginVO.setToken(token);
+
+        return userLoginVO;
+    }
+
+    /**
+     * 设置默认值
+     */
+    private void setDefaultValues(User user) {
+        // 首次注册会自动将昵称设置为邮箱
+        if (!StringUtils.hasText(user.getNickname())) {
+                // 策略A：直接用完整邮箱
+                user.setNickname(user.getEmail().trim());
+
+                // 策略B（可选）：只取邮箱 @ 前面的部分，如果需要可以取消注释下面这行
+                // user.setNickname(user.getEmail().substring(0, user.getEmail().indexOf("@")));
+        }
+        // 设置默认角色
+        user.setRole(UserRoleConstant.ROLE_USER);
+        // 设置用户默认头像
+        user.setImage(DefaultImageURLConstant.DEFAULT_AVATAR_URL);
+
+    }
+    // 密码加密（使用 BCrypt）
+    public String encryptedPassword(String password) {
+        return passwordEncoder.encode(password);
+    }
+
+    // 用户名是否存在
+    public boolean isUsernameExist(String username) {
+        // 非空校验
+        if (!StringUtils.hasText(username)) return false;
+        // mybatis-plus 查询
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        // 添加判断条件
+        wrapper.eq(User::getUsername, username.trim());
+        // 查询结果
+        return this.count(wrapper) > 0;
+    }
+
+    // 邮箱是否存在
+    public boolean isEmailExist(String email) {
+        if (!StringUtils.hasText(email)) return false;
+        //   lambda 方式添加查询条件
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        // 添加判断条件
+        wrapper.eq(User::getEmail, email.trim());
+        return this.count(wrapper) > 0;
+    }
+}

@@ -1,0 +1,132 @@
+services:
+  mysql:
+    image: mysql:8.0.36
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 766498
+      MYSQL_DATABASE: yuntan_db
+      MYSQL_USER: yuntan
+      MYSQL_PASSWORD: 766498
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql      # Docker 卷管理
+      - ../data/mysql:/var/lib/mysql   # 本地挂载，开发可直接访问
+    networks:
+      - yuntan-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.4
+    container_name: redis
+    ports:
+      - "6405:6379"
+    volumes:
+      - redis_data:/data
+      - ../data/redis:/data
+    networks:
+      - yuntan-network
+    restart: unless-stopped
+
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.12
+    container_name: es
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=766498
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+      - ../data/es:/usr/share/elasticsearch/data
+    networks:
+      - yuntan-network
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.19.12
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es:9200
+      - ELASTIC_PASSWORD=766498
+    ports:
+      - "5601:5601"
+    depends_on:
+      - es
+    networks:
+      - yuntan-network
+    restart: unless-stopped
+
+#  ai-service:
+#    build:
+#      context: ../../ai-service
+#      dockerfile: Dockerfile   # 开发模式 Dockerfile
+#    container_name: ai-service
+#    volumes:
+#      - ../../ai-service:/app
+#      - ../data:/data
+#    ports:
+#      - "5000:5000"
+#    environment:
+#      - PYTHONUNBUFFERED=1
+#    depends_on:
+#      - mysql
+#      - redis
+#    networks:
+#      - yuntan-network
+#    restart: unless-stopped
+
+#  backend:
+#    build:
+#      context: ../../backend/yuntan-monolith-app
+#      dockerfile: Dockerfile   # 开发模式 Dockerfile
+#    container_name: backend
+#    volumes:
+#      - ../../backend:/app
+#      - ../data:/data
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/yuntan_db
+#      - SPRING_DATASOURCE_USERNAME=yuntan
+#      - SPRING_DATASOURCE_PASSWORD=766498
+#      - REDIS_HOST=redis
+#      - ELASTICSEARCH_HOST=http://es:9200
+#    depends_on:
+#      - mysql
+#      - redis
+#      - es
+#    networks:
+#      - yuntan-network
+#    restart: unless-stopped
+
+#  nginx:
+#    image: nginx:stable-perl
+#    container_name: nginx
+#    ports:
+#      - "80:80"
+#    volumes:
+#      - ../../deploy/nginx:/etc/nginx/conf.d
+#      - ../data:/data
+#    depends_on:
+#      - backend
+#      - ai-service
+#    networks:
+#      - yuntan-network
+#    restart: unless-stopped
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  es_data:
+    driver: local
+
+networks:
+  yuntan-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

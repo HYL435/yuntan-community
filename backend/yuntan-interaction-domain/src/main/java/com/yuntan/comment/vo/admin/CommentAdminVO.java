@@ -1,0 +1,140 @@
+package com.yuntan.comment.vo.admin;
+
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+/**
+ * 评论实体类
+ */
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Schema(description = "评论实体")
+public class CommentAdminVO implements Serializable {
+
+    /**
+     * 主键ID
+     */
+    @TableId(type = IdType.ASSIGN_ID)
+    @Schema(description = "评论ID", example = "1")
+    private Long id;
+
+    /**
+     * 关联文章ID
+     */
+    @Schema(
+            description = "文章ID",
+            example = "1",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
+    private Long articleId;
+
+    /**
+     * 文章标题
+     */
+    @Schema(
+            description = "文章标题",
+            example = "Spring Boot入门指南",
+            maxLength = 200
+    )
+    private String title;
+
+    /**
+     * 评论者用户ID
+     */
+    @Schema(
+            description = "评论者ID",
+            example = "2",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
+    private Long userId;
+
+    /**
+     * 昵称
+     */
+    @Schema(description = "用户昵称", example = "张三")
+    private String nickname;
+
+
+    /**
+     * 评论内容
+     */
+    @Schema(
+            description = "评论内容",
+            example = "写得真好！",
+            requiredMode = Schema.RequiredMode.REQUIRED,
+            maxLength = 1000
+    )
+    private String content;
+
+    /**
+     * 评论URL
+     */
+    @Schema(
+            description = "评论URL",
+            example = "https://example.com/cover.jpg",
+            maxLength = 500
+    )
+    private String image;
+
+    /**
+     * 点赞数（缓存同步）
+     */
+    @Schema(
+            description = "点赞数",
+            example = "5",
+            defaultValue = "0"
+    )
+    private Integer likeCount;
+
+    /**
+     * 评论状态：0-待审核，1-审核通过， 2-审核拒绝
+     */
+    @Schema(
+            description = "评论状态：0-待审核，1-审核通过， 2-审核拒绝",
+            example = "0",
+            allowableValues = {"0", "1"},
+            defaultValue = "0"
+    )
+    private Integer status;
+
+    /**
+     * 评论人IP
+     */
+    @Schema(
+            description = "评论人IP",
+            example = "192.168.1.1"
+    )
+    private String ip;
+
+    /**
+     * 创建时间
+     */
+    @Schema(
+            description = "创建时间",
+            example = "2024-01-15 10:30:00"
+    )
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
+
+    /**
+     * 更新时间
+     */
+    @Schema(
+            description = "最后更新时间",
+            example = "2024-01-15 10:35:00"
+    )
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
+}

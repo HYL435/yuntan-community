@@ -6,6 +6,7 @@ import com.yuntan.article.dto.ArticleInteractDTO;
 import com.yuntan.article.entity.Article;
 import com.yuntan.article.vo.ArticleExhibitFrontVO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
@@ -16,8 +17,11 @@ public interface ArticleMapper extends BaseMapper<Article> {
     /**
      * 联表分页查询文章列表
      */
-    Page<ArticleExhibitFrontVO> selectArticleWithCategory(Page<Article> page, Long categoryId, Long tagId);
-
+    Page<ArticleExhibitFrontVO> selectArticleWithCategory(
+            Page<Article> page,
+            @Param("categoryId") Long categoryId,
+            @Param("tagId") Long tagId
+    );
     /**
      * 获取全局热门文章ID列表
      */

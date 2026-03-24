@@ -91,7 +91,7 @@ public class BusinessException extends RuntimeException {
     }
 
     // 邮箱不存在
-    public static Exception emailNotExist(String email) {
+    public static BusinessException emailNotExist(String email) {
         return new BusinessException(40003, email + MessageConstant.EMAIL_NOT_EXIST, 400);
     }
 }

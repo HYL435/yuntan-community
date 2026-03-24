@@ -277,6 +277,14 @@ const checkLogin = () => {
   return true
 }
 
+const reportView = async (id: number) => {
+  try {
+    await http.post(`/front/views/${id}`)
+  } catch (err) {
+    console.warn('上报浏览量失败', err)
+  }
+}
+
 const handleLike = async () => {
   if (!checkLogin()) return
   const prevIsLike = article.value.isLike
@@ -284,7 +292,7 @@ const handleLike = async () => {
   const prevCount = Number(article.value.likeCount) || 0
   article.value.isLike = nextIsLike
   article.value.likeCount = Math.max(0, prevCount + (nextIsLike ? 1 : -1))
-  try { await http.post(`/front/interacts/like/${article.value.id}`) } 
+  try { await http.post(`/front/likes/${article.value.id}`) }
   catch { article.value.isLike = prevIsLike; article.value.likeCount = prevCount }
 }
 
@@ -295,7 +303,7 @@ const handleCollect = async () => {
   const prevCount = Number(article.value.collectCount) || 0
   article.value.isCollect = nextIsCollect
   article.value.collectCount = Math.max(0, prevCount + (nextIsCollect ? 1 : -1))
-  try { await http.post(`/front/interacts/collect/${article.value.id}`) } 
+  try { await http.post(`/front/collects/${article.value.id}`) }
   catch { article.value.isCollect = prevIsCollect; article.value.collectCount = prevCount }
 }
 
@@ -304,7 +312,11 @@ const formatDate = (s: string) => s ? new Date(s).toLocaleDateString() : ''
 const formatNumber = (n: number) => { const num = Number(n); return num >= 1000 ? (num/1000).toFixed(1)+'k' : num.toString() }
 
 onMounted(() => {
-  if (articleId.value) fetchArticleDetail(articleId.value)
+  if (articleId.value) {
+    fetchArticleDetail(articleId.value)
+    const viewId = Number(articleId.value)
+    if (!Number.isNaN(viewId)) reportView(viewId)
+  }
   window.addEventListener('scroll', () => {
     const art = document.querySelector('article')
     if (art) {

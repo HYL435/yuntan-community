@@ -18,7 +18,7 @@ import yuntan.common.domain.Result;
 @Slf4j
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/api/admin/articles")
+@RequestMapping("/admin/articles")
 @Tag(description = "后台文章接口", name = "文章管理")
 public class AdminArticleController {
 

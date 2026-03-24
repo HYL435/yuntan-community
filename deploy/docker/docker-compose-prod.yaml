@@ -97,16 +97,12 @@ services:
   # Nginx
   # ======================
   nginx:
-    image: nginx:stable-perl
+    build:
+      context: ../../
+      dockerfile: frontend/Dockerfile
     container_name: nginx
     ports:
-      - "${NGINX_PORT}:80"
-    volumes:
-      - ../../deploy/nginx:/etc/nginx/conf.d
-      - ../data:/data
-    depends_on:
-      - backend
-      - ai-service
+      - "80:80"
     networks:
       - yuntan-network
     restart: unless-stopped

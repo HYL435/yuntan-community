@@ -1,8 +1,8 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
 // 创建 axios 实例
-// 开发环境将所有请求前缀为 /api（由 Vite 代理转发到后端），生产环境使用绝对 URL
-const baseURL = (import.meta.env.MODE === 'development') ? '/api' : ((import.meta.env as any).VITE_API_URL || 'https://yuntan-blog.top');
+// 所有请求统一走 /api 前缀，由网关或反向代理转发到后端
+const baseURL = '/api';
 
 const http: AxiosInstance = axios.create({
   baseURL,

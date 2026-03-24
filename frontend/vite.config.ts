@@ -15,12 +15,12 @@ export default defineConfig({
     },
     proxy: {
       '/front': {
-        target: 'https://yuntan-blog.top',
+        target: 'http://localhost',
         changeOrigin: true
       },
       // 使用 /api 前缀代理后端，避免与前端 /admin 路由冲突
       '/api': {
-        target: 'https://yuntan-blog.top',
+        target: 'http://localhost',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }

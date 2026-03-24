@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import yuntan.common.domain.Result;
 
 @Slf4j
-@RequestMapping("/api/front/articles")
+@RequestMapping("/front/articles")
 @RestController
 @RequiredArgsConstructor
 @Tag(description = "前台文章接口", name = "文章管理")

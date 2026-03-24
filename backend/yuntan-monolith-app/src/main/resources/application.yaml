@@ -15,7 +15,7 @@ spring:
     default-property-inclusion: non_null
 
 server:
-  port: 8081
+  port: 8080
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -50,3 +50,23 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+
+security:
+  whitelist:
+    - /front/users/login/**
+    - /front/users/register/**
+    - /front/users/forgetPassword
+    - /front/users/emailCode
+    - /docs/**
+    - /swagger-ui/**
+    - /v3/api-docs/**
+    - /actuator/**
+    # 补充：添加网关健康检查路径
+    - /health/**
+    # 文章相关路径
+    - /front/articles/**
+    - /front/categories/**
+    - /front/tags/**
+    - /front/views/**
+    # 评论相关路径
+    - /front/comments/{articleId}

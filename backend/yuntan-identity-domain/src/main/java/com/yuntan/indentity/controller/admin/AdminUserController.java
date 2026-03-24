@@ -17,7 +17,7 @@ import yuntan.common.domain.Result;
 @Slf4j
 @Tag(description = "后台用户相关接口", name = "用户管理")
 @RestController
-@RequestMapping("api/admin/users")
+@RequestMapping("/admin/users")
 @RequiredArgsConstructor
 public class AdminUserController {
 

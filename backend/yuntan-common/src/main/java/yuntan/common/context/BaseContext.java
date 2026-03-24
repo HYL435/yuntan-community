@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 public class BaseContext {
 
+    //  使用ThreadLocal来存储每个线程的请求上下文和用户ID
     private static final ThreadLocal<HttpServletRequest> REQUEST_HOLDER = new ThreadLocal<>();
     private static final ThreadLocal<Long> USER_ID_HOLDER = new ThreadLocal<>();
 

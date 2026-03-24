@@ -19,7 +19,7 @@ import java.util.Set;
 @Slf4j
 @Tag(description = "前台用户相关接口", name = "用户管理")
 @RestController
-@RequestMapping("api/front/users")
+@RequestMapping("/front/users")
 @RequiredArgsConstructor
 public class FrontUserController {
 

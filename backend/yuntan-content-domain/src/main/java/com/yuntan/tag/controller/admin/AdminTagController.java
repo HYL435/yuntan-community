@@ -17,7 +17,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/admin/tags")
+@RequestMapping("/admin/tags")
 @RequiredArgsConstructor
 @Tag(description = "后台标签接口", name = "标签")
 public class AdminTagController {

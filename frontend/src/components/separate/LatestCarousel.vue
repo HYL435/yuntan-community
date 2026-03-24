@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import ArticleCard from '@/components/cards/ArticleCard.vue'
 import ThreeBodyLoader from '@/components/loaders/ThreeBodyLoader.vue'
+import http from '@/api/http'
 
 const router = useRouter()
 const row = ref<HTMLElement | null>(null)
@@ -27,18 +28,14 @@ const isScrolledToBottom = ref(false)
 const fetchRecommendedArticles = async (pageNo: number = 1) => {
   loading.value = true
   try {
-    const response = await fetch(`/front/articles/page?pageNo=${pageNo}&pageSize=5`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await http.get('/front/articles/page', {
+      params: {
+        pageNo,
+        pageSize: 5,
       },
     })
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
+
+    const data = response.data || {}
     console.log('API response:', data)
     console.log('API response keys:', Object.keys(data))
     console.log('data.data:', data.data)

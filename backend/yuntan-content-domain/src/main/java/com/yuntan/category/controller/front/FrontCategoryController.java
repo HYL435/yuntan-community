@@ -14,7 +14,7 @@ import yuntan.common.domain.Result;
 import java.util.List;
 
 @Slf4j
-@RequestMapping("/api/front/categories")
+@RequestMapping("/front/categories")
 @RestController
 @RequiredArgsConstructor
 @Tag(description = "前台分类接口", name = "分类")

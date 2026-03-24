@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import yuntan.common.domain.Result;
 
 @Slf4j
-@RequestMapping("/api/front/views")
+@RequestMapping("/front/views")
 @RestController
 @RequiredArgsConstructor
 @Tag(description = "前台交互接口", name = "交互")

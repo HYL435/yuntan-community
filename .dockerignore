@@ -1,0 +1,17 @@
+.git
+.idea
+frontend/.vscode
+
+deploy/data
+deploy/docker/.env
+
+frontend/node_modules
+frontend/dist
+frontend/.vite
+frontend/.cache
+
+backend/**/target
+backend/**/build
+
+**/.DS_Store
+**/Thumbs.db

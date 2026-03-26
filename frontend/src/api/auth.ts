@@ -141,7 +141,7 @@ export const logoutApi = () => {
  * 忘记密码：请求发送重置密码邮件或验证码
  */
 export const forgotPasswordApi = (email: string) => {
-  return http.post<{ code: number; message: string }>('/front/users/forgot', { email });
+  return http.put<{ code: number; message: string }>('/front/users/forgetPassword', { email });
 };
 
 /**
@@ -157,5 +157,5 @@ export const sendResetCodeApi = (email: string) => {
  * 使用验证码重置密码
  */
 export const resetPasswordApi = (params: { email: string; code: string; newPassword: string }) => {
-  return http.post<{ code: number; message: string }>('/front/users/forgot/reset', params);
+  return http.put<{ code: number; message: string }>('/front/users/forgetPassword', params);
 };

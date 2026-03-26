@@ -452,17 +452,8 @@ const submitForm = async () => {
     if (valid) {
       submitLoading.value = true
       try {
-        if (dialogType.value === 'create') {
-          await http.post('/admin/users', formData)
-          ElMessage.success('新增成功')
-        } else {
-          // 编辑时不传密码
-          const { password, ...updateData } = formData
-          await http.put('/admin/users', updateData)
-          ElMessage.success('更新成功')
-        }
-        dialogVisible.value = false
-        fetchList()
+        // 后端当前未提供 /admin/users 的新增与编辑接口，避免请求打到不存在端点
+        ElMessage.warning('后端暂未提供用户新增/编辑接口，请先在后端补充对应 API')
       } catch (error: any) {
         console.error(error)
         ElMessage.error(error.message || '操作失败')

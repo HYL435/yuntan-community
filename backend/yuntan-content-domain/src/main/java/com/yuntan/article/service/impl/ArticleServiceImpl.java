@@ -1,6 +1,5 @@
 package com.yuntan.article.service.impl;
 
-
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -17,6 +16,7 @@ import com.yuntan.article.mapper.ArticleMapper;
 import com.yuntan.article.mapper.ArticleTagMapper;
 import com.yuntan.article.query.ArticleExhibitQuery;
 import com.yuntan.article.query.ArticleManageQuery;
+import com.yuntan.article.service.IArticleContentService;
 import com.yuntan.article.service.IArticleService;
 import com.yuntan.article.vo.*;
 import com.yuntan.category.mapper.CategoryMapper;
@@ -61,6 +61,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     private final ArticleTagMapper articleTagMapper;
     private final LikeMapper likeMapper;
     private final CollectMapper collectMapper;
+    private final IArticleContentService articleContentService;
 
     private final OssUtil articleOssUtil;
 
@@ -108,7 +109,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             redisTemplate.expire(key, ttl, TimeUnit.SECONDS);
         }
 
-        // TODO 这里直接设置为 null，等你文章内容表做好了再改成真正的内容
+        // 从文章正文表中获取文章内容（不缓存，直接查库，保证最新）
+        articleContentService.getArticleContentById(articleFrontVO.getArticleContentId()).ifPresent(articleFrontVO::setContent);
 
         // 3. 【核心修复】无论缓存是否命中，都要处理个性化状态（点赞/收藏）
         Long userId = BaseContext.getUserId(); // 假设 BaseContext 能安全处理未登录返回 null
@@ -444,8 +446,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             } else {
                 article.setCoverImg(DefaultImageURLConstant.DEFAULT_BLOG_COVER_URL);
             }
-
+            //TODO 将正文内容存入文章正文表
+            Long articleContentId = articleContentService.addArticleContent(article.getId(), articleSaveDTO.getContent());
             // 保存文章
+            article.setArticleContentId(articleContentId);
             this.save(article);
         } else {
             String key;
@@ -465,6 +469,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             } catch (IOException e) {
                 throw new BusinessException(MessageConstant.UPLOAD_FAILED);
             }
+            // 更新文章正文
+            articleContentService.updateArticleContent(article.getArticleContentId(), articleSaveDTO.getContent());
             // 更新文章
             this.updateById(article);
             // 删除缓存
@@ -494,9 +500,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         articleTagMapper.deleteByArticleId(articleId);
         // 将新的文章和标签关系存入数据库
         tagIds.forEach(tagId -> articleTagMapper.insert(new ArticleTag(articleId, tagId)));
-
-        //TODO 将正文内容存入文章正文表
-
     }
 
     /**

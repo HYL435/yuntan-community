@@ -313,7 +313,10 @@ const onContextOpenStatusDialog = () => {
 const submitStatusChange = async () => {
   if (!statusDialogRow.value) return
   try {
-    await http.put('/admin/articles/status', null, { params: { id: String(statusDialogRow.value.id), status: String(statusDialogStatus.value) } })
+    await http.put('/admin/articles/status', {
+      id: String(statusDialogRow.value.id),
+      status: Number(statusDialogStatus.value ?? 0)
+    })
     ElMessage.success('状态修改成功')
     statusDialogVisible.value = false
     fetchList()
@@ -332,7 +335,7 @@ const onContextDelete = async () => {
     { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
   ).then(async () => {
     try {
-      await http.put(`/admin/articles/delete/${row.id}`)
+      await http.put(`/admin/articles/deleted/${row.id}`)
       ElMessage.success('删除成功')
       if (tableData.value.length === 1 && queryParams.current > 1) queryParams.current--
       fetchList()

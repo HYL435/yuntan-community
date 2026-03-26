@@ -44,7 +44,7 @@ public class InteractSyncTask {
         // 2. 遍历 ID，从 Redis Hash 中读取最新计数
         for (String idStr : dirtyIds) {
             long articleId = Long.parseLong(idStr);
-            String key = RedisConstant.ARTICLE_HASH_PREFIX + articleId;
+            String key = RedisConstant.ARTICLE_COUNTER_HASH_PREFIX + articleId;
 
             // 批量获取 viewCount, likeCount, collectCount
             // 顺序要和 Arrays.asList 中的字段名一致

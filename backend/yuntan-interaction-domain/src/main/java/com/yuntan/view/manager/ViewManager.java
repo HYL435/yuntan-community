@@ -78,7 +78,7 @@ public class ViewManager {
      * 更新阅读量
      */
     private void updateViewCount(Long articleId, int delta) {
-        String key = RedisConstant.ARTICLE_HASH_PREFIX + articleId;
+        String key = RedisConstant.ARTICLE_COUNTER_HASH_PREFIX + articleId;
 
         // 原子递增Redis Hash中的viewCount
         redisTemplate.opsForHash().increment(key, "viewCount", delta);

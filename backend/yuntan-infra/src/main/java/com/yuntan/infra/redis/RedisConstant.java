@@ -21,6 +21,7 @@ public class RedisConstant {
     public static final String QUERY_TYPE_TAG = "TAG";
 
     public static final String ARTICLE_HASH_PREFIX = "article:info:"; // 文章缓存 Hash Key 前缀
+    public static final String ARTICLE_COUNTER_HASH_PREFIX = "article:cnt:"; // 文章计数器 点赞、收藏等 Hash Key 前缀
     public static final String DIRTY_SET_KEY = "article:cnt:dirty"; // 脏数据集合 Key
     // 新增：记录某篇文章被哪些用户点赞了
     public static final String LIKED_USERS_KEY_PREFIX = "article:liked_users:";

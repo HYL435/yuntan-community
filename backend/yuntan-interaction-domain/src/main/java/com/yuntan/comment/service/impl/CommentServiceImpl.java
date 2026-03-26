@@ -1,6 +1,5 @@
 package com.yuntan.comment.service.impl;
 
-
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -25,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import yuntan.common.constant.MessageConstant;
 import yuntan.common.context.BaseContext;
 import yuntan.common.exception.BusinessException;
@@ -82,6 +82,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
      * 获取评论列表
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public List<CommentVO> listComments(Long articleId) {
 
         // ==========================================
@@ -228,6 +229,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
      * 后台分页查询评论列表
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public PageDTO<CommentAdminVO> listCommentsAdmin(CommentQuery pageQuery) {
 
         // 获取page对象
@@ -319,6 +321,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
      * 修改评论状态
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateStatusById(CommentStatusDTO commentStatusDTO) {
 
         Comment comment = BeanUtils.copyBean(commentStatusDTO, Comment.class);

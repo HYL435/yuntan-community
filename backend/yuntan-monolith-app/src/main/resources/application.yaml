@@ -14,6 +14,11 @@ spring:
     time-zone: Asia/Shanghai
     default-property-inclusion: non_null
 
+  # 开启虚拟线程
+  thread:
+    virtual:
+      enabled: true
+
 server:
   port: 8080
 
@@ -53,20 +58,23 @@ logging:
 
 security:
   whitelist:
-    - /front/users/login/**
-    - /front/users/register/**
-    - /front/users/forgetPassword
-    - /front/users/emailCode
-    - /docs/**
-    - /swagger-ui/**
-    - /v3/api-docs/**
-    - /actuator/**
-    # 补充：添加网关健康检查路径
-    - /health/**
-    # 文章相关路径
-    - /front/articles/**
-    - /front/categories/**
-    - /front/tags/**
-    - /front/views/**
-    # 评论相关路径
-    - /front/comments/{articleId}
+    paths:
+      - /front/users/login/**
+      - /front/users/register/**
+      - /front/users/forgetPassword
+      - /front/users/emailCode
+      - /docs/**
+      - /swagger-ui/**
+      - /v3/api-docs/**
+      - /actuator/**
+      - /error/**
+      - /error
+      # 补充：添加网关健康检查路径
+      - /health/**
+      # 文章相关路径
+      - /front/articles/**
+      - /front/categories/**
+      - /front/tags/**
+      - /front/views/**
+      # 评论相关路径
+      - /front/comments/{articleId}/**

@@ -80,6 +80,12 @@
             <artifactId>aliyun-sdk-oss</artifactId>
         </dependency>
 
+        <!--        发送邮件的依赖-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
     </dependencies>
     <build>
         <plugins>

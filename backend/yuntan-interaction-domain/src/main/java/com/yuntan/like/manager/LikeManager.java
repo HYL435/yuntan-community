@@ -43,8 +43,6 @@ public class LikeManager {
             // 更新Redis计数
             updateLikeCount(articleId, 1);
         }
-        // 删除Redis缓存，确保下次读取时能获取最新数据
-        redisTemplate.delete(RedisConstant.ARTICLE_HASH_PREFIX + articleId);
 
     }
 
@@ -52,7 +50,7 @@ public class LikeManager {
      * 更新点赞数
      */
     private void updateLikeCount(Long articleId, int delta) {
-        String key = RedisConstant.ARTICLE_HASH_PREFIX + articleId;
+        String key = RedisConstant.ARTICLE_COUNTER_HASH_PREFIX + articleId;
 
         // 原子递增Redis Hash中的likeCount
         redisTemplate.opsForHash().increment(key, "likeCount", delta);

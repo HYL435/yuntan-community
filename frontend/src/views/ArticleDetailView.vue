@@ -155,6 +155,7 @@ import { useUserStore } from '@/stores/user'
 import { useNotification } from '@/composables/useNotification'
 import { useRoute } from 'vue-router'
 import http from '@/api/http'
+import { likeArticleApi, collectArticleApi } from '@/api'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/atom-one-dark.css'
@@ -287,23 +288,27 @@ const reportView = async (id: number) => {
 
 const handleLike = async () => {
   if (!checkLogin()) return
+  const currentArticleId = article.value.id || articleId.value
+  if (!currentArticleId) return
   const prevIsLike = article.value.isLike
   const nextIsLike = !prevIsLike
   const prevCount = Number(article.value.likeCount) || 0
   article.value.isLike = nextIsLike
   article.value.likeCount = Math.max(0, prevCount + (nextIsLike ? 1 : -1))
-  try { await http.post(`/front/likes/${article.value.id}`) }
+  try { await likeArticleApi(currentArticleId) }
   catch { article.value.isLike = prevIsLike; article.value.likeCount = prevCount }
 }
 
 const handleCollect = async () => {
   if (!checkLogin()) return
+  const currentArticleId = article.value.id || articleId.value
+  if (!currentArticleId) return
   const prevIsCollect = article.value.isCollect
   const nextIsCollect = !prevIsCollect
   const prevCount = Number(article.value.collectCount) || 0
   article.value.isCollect = nextIsCollect
   article.value.collectCount = Math.max(0, prevCount + (nextIsCollect ? 1 : -1))
-  try { await http.post(`/front/collects/${article.value.id}`) }
+  try { await collectArticleApi(currentArticleId) }
   catch { article.value.isCollect = prevIsCollect; article.value.collectCount = prevCount }
 }
 

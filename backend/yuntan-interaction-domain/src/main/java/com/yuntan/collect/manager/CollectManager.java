@@ -41,16 +41,13 @@ public class CollectManager {
             // 更新Redis计数
             updateCollectCount(articleId, 1);
         }
-        // 删除Redis缓存，确保下次读取时能获取最新数据
-        redisTemplate.delete(RedisConstant.ARTICLE_HASH_PREFIX + articleId);
-
     }
 
     /**
      * 更新收藏数
      */
     private void updateCollectCount(Long articleId, int delta) {
-        String key = RedisConstant.ARTICLE_HASH_PREFIX + articleId;
+        String key = RedisConstant.ARTICLE_COUNTER_HASH_PREFIX + articleId;
 
         // 原子递增Redis Hash中的collectCount
         redisTemplate.opsForHash().increment(key, "collectCount", delta);

@@ -1,0 +1,59 @@
+package com.yuntan.interaction.comment.controller.front;
+
+
+import com.yuntan.interaction.comment.dto.front.CommentDTO;
+import com.yuntan.interaction.comment.service.ICommentService;
+import com.yuntan.interaction.comment.vo.front.CommentVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
+import yuntan.common.domain.Result;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/front/comments")
+@Slf4j  // 启用日志记录
+@RequiredArgsConstructor  // 生成包含所有 final 字段的构造器，简化依赖注入
+@Tag(name = "前台-评论接口")
+public class FrontCommentController {
+
+    public final ICommentService commentService;
+
+    @PostMapping
+    @Operation(summary = "添加评论")
+    public Result<Void> saveComment(@RequestBody CommentDTO commentDTO) {
+
+        log.info("保存评论，评论参数：{}", commentDTO);
+
+        commentService.saveComment(commentDTO);
+
+        return Result.ok();
+    }
+
+
+    @GetMapping("/{articleId}")
+    @Operation(summary = "查询文章下的评论")
+    public Result<List<CommentVO>> listComments(@PathVariable Long articleId) {
+
+        log.info("查询文章下的评论，文章ID：{}", articleId);
+
+        List<CommentVO> commentVOS = commentService.listComments(articleId);
+
+        return Result.ok(commentVOS);
+    }
+
+    @GetMapping("/{articleId}/count")
+    @Operation(summary = "查询文章下的评论数量")
+    public Result<Integer> countComments(@PathVariable Long articleId) {
+
+        log.info("查询文章下的评论数量，文章ID：{}", articleId);
+
+        Integer count = commentService.countComments(articleId);
+
+        return Result.ok(count);
+    }
+
+}

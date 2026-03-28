@@ -1,5 +1,5 @@
 <script setup lang="ts" name="HomeView">
-import { ref, onMounted, onUnmounted, reactive } from 'vue';
+import { ref, onMounted, onUnmounted, reactive, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import Header from '@/layouts/Header.vue';
 import GridBackground from '@/components/background/GridBackground.vue';
@@ -35,11 +35,26 @@ const router = useRouter();
 
 const categories = ref<CategoryFrontVO[]>([]);
 const categoryArticles = ref<Record<string, any[]>>({});
+const rightSidebarRef = ref<HTMLElement | null>(null)
+const sidebarStickyTop = ref(96)
+let rightSidebarResizeObserver: ResizeObserver | null = null
 // 分页设置：主页面每个分类每页显示数量
 const PAGE_SIZE = 3
 const categoryPage = reactive<Record<string, number>>({})
 const categoryTotal = reactive<Record<string, number>>({})
 const categoryHasMore = reactive<Record<string, boolean>>({})
+
+const updateSidebarStickyTop = () => {
+  const sidebarEl = rightSidebarRef.value
+  if (!sidebarEl) return
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight
+  const minTop = -120
+  const bottomGap = 4
+  const squeezeOffset = 62
+  const sidebarHeight = Math.ceil(sidebarEl.getBoundingClientRect().height)
+  const top = viewportHeight - sidebarHeight - bottomGap - squeezeOffset
+  sidebarStickyTop.value = Math.max(minTop, top)
+}
 
 const fetchCategoryPage = async (catId: number | string, pageNo = 1) => {
   const catKey = String(catId)
@@ -129,6 +144,9 @@ onMounted(async () => {
   } catch (e) {
     tags.value = [];
   }
+
+  await nextTick()
+  updateSidebarStickyTop()
 });
 
 const handleScroll = () => {
@@ -156,7 +174,9 @@ const goToTag = (tag?: string) => {
 
 onMounted(() => {
   handleScroll();
+  updateSidebarStickyTop()
   window.addEventListener('scroll', handleScroll);
+  window.addEventListener('resize', updateSidebarStickyTop)
   const checkDark = () => {
     const html = document.documentElement.classList;
     const body = document.body.classList;
@@ -171,10 +191,22 @@ onMounted(() => {
   const observer = new MutationObserver(() => isDarkMode.value = checkDark());
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
   observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+  if (typeof ResizeObserver !== 'undefined') {
+    rightSidebarResizeObserver = new ResizeObserver(() => updateSidebarStickyTop())
+    if (rightSidebarRef.value) {
+      rightSidebarResizeObserver.observe(rightSidebarRef.value)
+    }
+  }
 });
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('resize', updateSidebarStickyTop)
+  if (rightSidebarResizeObserver) {
+    rightSidebarResizeObserver.disconnect()
+    rightSidebarResizeObserver = null
+  }
 });
 </script>
 
@@ -311,7 +343,11 @@ onUnmounted(() => {
             
             <!-- 右边：侧边栏 -->
             <div class="md:col-span-1 lg:col-span-1">
-              <div class="sticky top-24 space-y-6">
+              <div
+                ref="rightSidebarRef"
+                class="sticky space-y-6 transition-[top] duration-200"
+                :style="{ top: `${sidebarStickyTop}px` }"
+              >
                 <BloggerCard />
                 
                 <!-- 【修复】侧边栏标签云文字颜色 -->

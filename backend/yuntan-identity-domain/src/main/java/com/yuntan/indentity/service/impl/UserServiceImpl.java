@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yuntan.dto.UserCommentDTO;
+import com.yuntan.indentity.auth.suppor.AuthMAilBuilder;
 import com.yuntan.indentity.dto.*;
 import com.yuntan.indentity.entity.User;
 import com.yuntan.indentity.mapper.UserMapper;
@@ -16,6 +17,7 @@ import com.yuntan.indentity.utils.TokenResolveUtil;
 import com.yuntan.indentity.utils.UserCheckUtil;
 import com.yuntan.indentity.vo.UserLoginVO;
 import com.yuntan.indentity.vo.UserVO;
+import com.yuntan.infra.mail.service.MailService;
 import com.yuntan.infra.oss.OssUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +62,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     private final TokenResolveUtil tokenResolveUtil;
     // RedisTemplate 用于验证码存储
     private final RedisTemplate<String, Object> redisTemplate;
+    // 发送邮件
+    private final AuthMAilBuilder authMAilBuilder;
+    private final MailService mailService;
 
     /**
      * 用户注册
@@ -102,7 +107,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         userLoginVO.setId(user.getId());
         userLoginVO.setToken(token);
 
-        // TODO 发送注册成功的邮件通知
+        // 发送注册成功的邮件通知
+        String subject = authMAilBuilder.buildWelcomeSubject();
+        String content = authMAilBuilder.buildWelcomeContent(user.getUsername());
+        mailService.sendMailAsync(user.getEmail(), subject, content);
 
         return userLoginVO;
     }
@@ -414,6 +422,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         EmailMsgDTO emailMsgDTO = new EmailMsgDTO(email, code, 2);
 
         // TODO 发送验证码邮件
+        String subject = authMAilBuilder.buildResetPasswordSubject();
+        String content = authMAilBuilder.buildResetPasswordContent(email,  code);
+        mailService.sendMailAsync(email, subject, content);
     }
 
 
@@ -475,10 +486,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         // 首次注册会自动将昵称设置为邮箱
         if (!StringUtils.hasText(user.getNickname())) {
                 // 策略A：直接用完整邮箱
-                user.setNickname(user.getEmail().trim());
+//                user.setNickname(user.getEmail().trim());
 
                 // 策略B（可选）：只取邮箱 @ 前面的部分，如果需要可以取消注释下面这行
-                // user.setNickname(user.getEmail().substring(0, user.getEmail().indexOf("@")));
+                 user.setNickname(user.getEmail().substring(0, user.getEmail().indexOf("@")));
         }
         // 设置默认角色
         user.setRole(UserRoleConstant.ROLE_USER);

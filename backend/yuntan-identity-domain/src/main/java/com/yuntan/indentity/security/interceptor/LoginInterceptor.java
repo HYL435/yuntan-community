@@ -62,7 +62,7 @@ public class LoginInterceptor implements HandlerInterceptor {
             Object roleObj = userInfo.get(KeyConstant.ROLE);
             Integer role = roleObj == null ? null : Integer.valueOf(roleObj.toString());
 
-            if (role == null || role != 1) {
+            if (role == null || role > 1) {
                 throw BusinessException.forbidden(); // 403
             }
         }

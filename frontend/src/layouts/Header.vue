@@ -23,13 +23,16 @@ const toggleMenu = () => {
 };
 
 const handleOptionClick = (linkName: string, option: string) => {
-  if (linkName !== "文章") return;
-  if (!option) return;
-  if (option === "首页") {
-    router.push("/");
+  if (linkName === "文章") {
+    if (!option) return;
+    if (option === "首页") { router.push("/"); return; }
+    router.push(`/tag/${encodeURIComponent(option)}`);
     return;
   }
-  router.push(`/tag/${encodeURIComponent(option)}`);
+  if (linkName === "社交") {
+    if (option === "留言板") { router.push("/message-board"); return; }
+    return;
+  }
 };
 
 const navLinks = [

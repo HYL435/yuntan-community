@@ -61,6 +61,11 @@ const routes: Array<RouteRecordRaw> = [
     name: 'TagView',
     component: () => import('@/views/TagView.vue')
   },
+  {
+    path: '/message-board',
+    name: 'MessageBoard',
+    component: () => import('@/views/MessageBoardView.vue')
+  },
   // 可以添加更多路由配置
   {
     path: '/admin',

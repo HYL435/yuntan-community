@@ -20,13 +20,13 @@ import com.yuntan.article.service.IArticleContentService;
 import com.yuntan.article.service.IArticleService;
 import com.yuntan.article.vo.*;
 import com.yuntan.category.mapper.CategoryMapper;
-import com.yuntan.collect.mapper.CollectMapper;
+import com.yuntan.interaction.collect.mapper.CollectMapper;
 import com.yuntan.dto.ArticleInfoDTO;
 import com.yuntan.infra.mysql.PageDTO;
 import com.yuntan.infra.mysql.PageQuery;
 import com.yuntan.infra.oss.OssUtil;
 import com.yuntan.infra.redis.RedisConstant;
-import com.yuntan.like.mapper.LikeMapper;
+import com.yuntan.interaction.like.mapper.LikeMapper;
 import com.yuntan.tag.mapper.TagMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +42,7 @@ import yuntan.common.utils.BeanUtils;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -81,69 +82,147 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         // 1. 尝试从缓存获取
         Map<Object, Object> cacheMap = redisTemplate.opsForHash().entries(key);
 
+        // 缓存命中了，但可能存在脏数据（null、空串、字符串 "null"），需要清洗一下
         if (!cacheMap.isEmpty()) {
-            // 缓存命中
-            articleFrontVO = BeanUtils.mapToBean(cacheMap, ArticleFrontVO.class);
-        } else {
-            // 缓存未命中，查库
-            Article article = this.getById(id);
-            if (article == null) {
-                throw new RuntimeException(MessageConstant.ARTICLE_NOT_FOUND);
+            Map<Object, Object> safeCacheMap = sanitizeCacheMap(cacheMap);
+
+            // 缓存里全是脏值，直接删掉回源
+            if (safeCacheMap.isEmpty()) {
+                log.warn("文章缓存为空或存在脏数据，删除缓存并回源数据库，key={}", key);
+                redisTemplate.delete(key);
+                articleFrontVO = loadArticleFromDbAndCache(id, key);
+            } else {
+                try {
+                    articleFrontVO = BeanUtils.mapToBean(safeCacheMap, ArticleFrontVO.class);
+
+                    // 关键字段缺失，说明缓存不完整，也删掉回源
+                    if (articleFrontVO == null || articleFrontVO.getId() == null || articleFrontVO.getArticleContentId() == null) {
+                        log.warn("文章缓存字段不完整，删除缓存并回源数据库，key={}", key);
+                        redisTemplate.delete(key);
+                        articleFrontVO = loadArticleFromDbAndCache(id, key);
+                    }
+                } catch (Exception e) {
+                    log.warn("文章缓存反序列化失败，删除缓存并回源数据库，key={}", key, e);
+                    redisTemplate.delete(key);
+                    articleFrontVO = loadArticleFromDbAndCache(id, key);
+                }
             }
-            articleFrontVO = BeanUtils.copyBean(article, ArticleFrontVO.class);
-
-            // 填充分类和标签（这些是公共数据，可以放缓存）
-            setCategoryAndTags(articleFrontVO);
-
-            // 写入缓存（注意：这里不应该写入 isLike/isCollect 这种个性化字段，或者写入默认 false）
-            // 建议在 dtoToMap 之前显式设置 false，避免污染公共缓存
-            articleFrontVO.setIsLike(false);
-            articleFrontVO.setIsCollect(false);
-
-            Map<String, Object> dataMap = BeanUtils.dtoToMap(articleFrontVO);
-            Map<String, String> stringMap = dataMap.entrySet().stream()
-                    .collect(Collectors.toMap(Map.Entry::getKey, entry -> String.valueOf(entry.getValue())));
-
-            redisTemplate.opsForHash().putAll(key, stringMap);
-            Long ttl = calculateTTL(articleFrontVO);
-            redisTemplate.expire(key, ttl, TimeUnit.SECONDS);
+        } else {
+            // 缓存未命中，查库并回填缓存
+            articleFrontVO = loadArticleFromDbAndCache(id, key);
         }
 
         // 从文章正文表中获取文章内容（不缓存，直接查库，保证最新）
-        articleContentService.getArticleContentById(articleFrontVO.getArticleContentId()).ifPresent(articleFrontVO::setContent);
+        articleContentService.getArticleContentById(articleFrontVO.getArticleContentId())
+                .ifPresent(articleFrontVO::setContent);
 
-        // 3. 【核心修复】无论缓存是否命中，都要处理个性化状态（点赞/收藏）
-        Long userId = BaseContext.getUserId(); // 假设 BaseContext 能安全处理未登录返回 null
-        if (userId != null) {
-            // 查询当前用户的交互状态
-            articleFrontVO.setIsLike(likeMapper.isLike(id, userId) > 0);
-            articleFrontVO.setIsCollect(collectMapper.isCollect(id, userId) > 0); // ✅ 修正变量名
-        } else {
-            // 未登录默认 false
-            articleFrontVO.setIsLike(false);
-            articleFrontVO.setIsCollect(false);
-        }
+        // 处理个性化状态（点赞/收藏）
+        fillInteractState(id, articleFrontVO);
 
         return articleFrontVO;
     }
 
+    /**
+     * 从数据库加载文章并写入缓存
+     */
+    private ArticleFrontVO loadArticleFromDbAndCache(Long id, String key) {
+        Article article = this.getById(id);
+        if (article == null) {
+            throw new RuntimeException(MessageConstant.ARTICLE_NOT_FOUND);
+        }
+
+        ArticleFrontVO articleFrontVO = BeanUtils.copyBean(article, ArticleFrontVO.class);
+
+        // 填充分类和标签
+        setCategoryAndTags(articleFrontVO);
+
+        // 个性化字段不要污染公共缓存，先给默认值
+        articleFrontVO.setIsLike(false);
+        articleFrontVO.setIsCollect(false);
+
+        writeArticleCache(key, articleFrontVO);
+        return articleFrontVO;
+    }
+
+    /**
+     * 写文章缓存：过滤 null，避免把 null 写成字符串 "null"
+     */
+    private void writeArticleCache(String key, ArticleFrontVO articleFrontVO) {
+        Map<String, Object> dataMap = BeanUtils.dtoToMap(articleFrontVO);
+        Map<String, String> stringMap = new HashMap<>();
+
+        dataMap.forEach((field, value) -> {
+            if (value != null) {
+                stringMap.put(field, String.valueOf(value));
+            }
+        });
+
+        if (!stringMap.isEmpty()) {
+            redisTemplate.opsForHash().putAll(key, stringMap);
+        }
+
+        Long ttl = calculateTTL(articleFrontVO);
+        redisTemplate.expire(key, ttl, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 清洗缓存中的脏值：
+     * 1. null
+     * 2. 空串
+     * 3. 字符串 "null"
+     */
+    private Map<Object, Object> sanitizeCacheMap(Map<Object, Object> cacheMap) {
+        Map<Object, Object> safeMap = new HashMap<>();
+
+        cacheMap.forEach((k, v) -> {
+            if (v == null) {
+                return;
+            }
+
+            String value = String.valueOf(v).trim();
+            if (value.isEmpty() || "null".equalsIgnoreCase(value)) {
+                return;
+            }
+
+            safeMap.put(k, v);
+        });
+
+        return safeMap;
+    }
+
+    /**
+     * 填充点赞/收藏状态
+     */
+    private void fillInteractState(Long articleId, ArticleFrontVO articleFrontVO) {
+        Long userId = BaseContext.getUserId();
+
+        if (userId != null) {
+            articleFrontVO.setIsLike(likeMapper.isLike(articleId, userId) > 0);
+            articleFrontVO.setIsCollect(collectMapper.isCollect(articleId, userId) > 0);
+        } else {
+            articleFrontVO.setIsLike(false);
+            articleFrontVO.setIsCollect(false);
+        }
+    }
+
+
+    // 计算过期时间：基础时间 + 随机抖动
     // 计算过期时间：基础时间 + 随机抖动
     private Long calculateTTL(ArticleFrontVO article) {
         long baseTTL;
+        long viewCount = article.getViewCount() == null ? 0L : article.getViewCount();
 
-        // 判断是否为热点文章（这里简单演示，实际可能根据 viewCount > 100 或 置顶字段）
-        if (article.getViewCount() > 100 || Objects.equals(article.getIsTop(), ArticleTopStatusEnum.TOP.getValue())) {
+        // 判断是否为热点文章
+        if (viewCount > 100 || Objects.equals(article.getIsTop(), ArticleTopStatusEnum.TOP.getValue())) {
             baseTTL = RedisConstant.HOT_ARTICLE_TTL;
         } else {
             baseTTL = RedisConstant.NORMAL_ARTICLE_TTL;
         }
 
-        // 生成随机抖动值：±60秒 (-60 到 +60)
-        // ThreadLocalRandom 性能优于 Random
         long jitter = ThreadLocalRandom.current().nextLong(-60, 61);
-
         return baseTTL + jitter;
     }
+
 
     /**
      * 分页查询文章列表

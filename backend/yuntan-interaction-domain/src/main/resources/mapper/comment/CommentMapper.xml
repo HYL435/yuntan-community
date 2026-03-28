@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.yuntan.comment.mapper.CommentMapper">
+<mapper namespace="com.yuntan.interaction.comment.mapper.CommentMapper">
 
 <!--    根据父评论ID列表查询子评论-->
-    <select id="selectByParentIds" resultType="com.yuntan.comment.entity.Comment">
+    <select id="selectByParentIds" resultType="com.yuntan.interaction.comment.entity.Comment">
         select * from comment where parent_id in
         <foreach collection="parentIds" item="parentId" open="(" separator="," close=")">
             #{parentId}

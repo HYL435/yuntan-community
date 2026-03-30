@@ -52,6 +52,36 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/views/EditProfileView.vue')
   },
   {
+    path: '/settings',
+    name: 'SettingsView',
+    component: () => import('@/views/SettingsView.vue')
+  },
+  {
+    path: '/bookshelf',
+    name: 'BookshelfView',
+    component: () => import('@/views/BookshelfView.vue')
+  },
+  {
+    path: '/friend-links',
+    name: 'FriendLinksView',
+    component: () => import('@/views/FriendLinksView.vue')
+  },
+  {
+    path: '/about/author',
+    name: 'AboutAuthorView',
+    component: () => import('@/views/AboutAuthorView.vue')
+  },
+  {
+    path: '/about/site',
+    name: 'AboutSiteView',
+    component: () => import('@/views/AboutSiteView.vue')
+  },
+  {
+    path: '/toolbox',
+    name: 'ToolboxView',
+    component: () => import('@/views/ToolboxView.vue')
+  },
+  {
     path: '/article/:id',
     name: 'ArticleDetailView',
     component: () => import('@/views/ArticleDetailView.vue')
@@ -66,6 +96,16 @@ const routes: Array<RouteRecordRaw> = [
     name: 'MessageBoard',
     component: () => import('@/views/MessageBoardView.vue')
   },
+  {
+    path: '/network-error',
+    name: 'NetworkError',
+    component: () => import('@/views/NetworkErrorView.vue')
+  },
+  {
+    path: '/categories',
+    name: 'Categories',
+    component: () => import('@/views/CategoriesListView.vue')
+  },
   // 可以添加更多路由配置
   {
     path: '/admin',
@@ -77,6 +117,7 @@ const routes: Array<RouteRecordRaw> = [
     { path: 'stats', name: 'AdminStats', component: () => import('@/views/admin/Stats.vue') },
       { path: 'articles', name: 'AdminArticles', component: () => import('@/views/admin/Articles.vue') },
       { path: 'comment', name: 'AdminComments', component: () => import('@/views/admin/Comments.vue') },
+      { path: 'guestbook', name: 'AdminDanmaku', component: () => import('@/views/admin/Danmaku.vue') },
       { path: 'categories', name: 'AdminCategories', component: () => import('@/views/admin/Categories.vue') },
       { path: 'tag', name: 'AdminTag', component: () => import('@/views/admin/Tags.vue') },
       { path: 'articles/edit', name: 'AdminArticleEdit', component: () => import('@/views/admin/ArticleEditView.vue') },
@@ -84,11 +125,21 @@ const routes: Array<RouteRecordRaw> = [
       { path: 'settings', name: 'AdminSettings', component: () => import('@/views/admin/Settings.vue') }
     ]
   },
+  // 必须放最后——匹配所有未定义路由，显示 404 页面
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/NotFoundView.vue')
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior(_to, _from, savedPosition) {
+    if (savedPosition) return savedPosition
+    return { top: 0, left: 0 }
+  }
 })
 
 // 全局路由守卫：限制 /admin 访问（必须登录且 token 中 role===0 或 1）

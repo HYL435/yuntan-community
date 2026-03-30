@@ -12,8 +12,8 @@ import com.yuntan.indentity.constant.KeyConstant;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import yuntan.common.constant.MessageConstant;
-import yuntan.common.exception.UnauthorizedException;
+import com.yuntan.common.constant.MessageConstant;
+import com.yuntan.common.exception.UnauthorizedException;
 
 import java.io.InputStream;
 import java.security.KeyPair;

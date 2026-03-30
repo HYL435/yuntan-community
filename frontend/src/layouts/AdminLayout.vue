@@ -19,9 +19,9 @@
         <el-menu
           :default-active="activeMenu"
           :collapse="isCollapse"
-          class="border-none !bg-transparent py-2"
-          text-color="#64748b"
-          active-text-color="#2563eb"
+          class="border-none bg-transparent! py-2"
+          :text-color="isDark ? '#94a3b8' : '#64748b'"
+          :active-text-color="isDark ? '#60a5fa' : '#2563eb'"
           unique-opened
           router
         >

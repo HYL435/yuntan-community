@@ -54,5 +54,13 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.card { background: var(--card-bg, #fff); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+:global(.dark) .card {
+  background: #1e293b;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
 </style>

@@ -9,6 +9,7 @@ import SeparateLine from '@/components/separate/SeparateLine.vue';
 import ArticleTwoCard from '@/components/cards/ArticleTwoCard.vue';
 import LatestCarousel from '@/components/separate/LatestCarousel.vue';
 import { getCategories, CategoryFrontVO } from '@/api/category';
+import { getFrontAnnouncement } from '@/api/announcement'
 import http from '@/api/http';
 import AnnouncementBar from '@/components/common/AnnouncementBar.vue';
 import StatsSidebar from '@/components/common/StatsSidebar.vue';
@@ -27,6 +28,7 @@ const tags = ref<TagFrontVO[]>([]);
 const announcementTitle = ref('网站公告')
 const announcementContent = ref('欢迎来到云坛 — 我们已升级界面与评论管理功能，体验更顺畅。')
 const announcementLink = ref('')
+const showAnnouncement = ref(false)
 
 const titleScale = ref(1);
 const titleOffset = ref(0);
@@ -44,6 +46,127 @@ const categoryPage = reactive<Record<string, number>>({})
 const categoryTotal = reactive<Record<string, number>>({})
 const categoryHasMore = reactive<Record<string, boolean>>({})
 
+const pickFirstArray = (obj: any): any[] => {
+  if (!obj || typeof obj !== 'object') return []
+  const key = Object.keys(obj).find(k => Array.isArray(obj[k]))
+  return key ? obj[key] : []
+}
+
+const parseJsonSafely = (v: any): any => {
+  if (typeof v !== 'string') return v
+  try {
+    return JSON.parse(v)
+  } catch {
+    return v
+  }
+}
+
+const normalizePayload = (payload: any): any => {
+  const p = parseJsonSafely(payload)
+  if (typeof p === 'object' && p) {
+    return {
+      ...p,
+      data: parseJsonSafely((p as any).data),
+    }
+  }
+  return p
+}
+
+const extractList = (payload: any): any[] => {
+  const normalized = normalizePayload(payload)
+
+  const parseArrayLike = (v: any): any[] => {
+    const value = parseJsonSafely(v)
+    if (Array.isArray(value)) return value
+    if (value && typeof value === 'object') {
+      const values = Object.values(value)
+      if (values.length && values.every(item => typeof item === 'object' && item !== null)) {
+        return values as any[]
+      }
+    }
+    if (typeof v === 'string') {
+      try {
+        const parsed = JSON.parse(v)
+        return Array.isArray(parsed) ? parsed : []
+      } catch {
+        return []
+      }
+    }
+    return []
+  }
+
+  const candidates = [
+    normalized?.data?.data?.records,
+    normalized?.data?.data?.list,
+    normalized?.data?.data?.rows,
+    normalized?.data?.data?.items,
+    normalized?.data?.data?.result,
+    normalized?.data?.records,
+    normalized?.data?.list,
+    normalized?.data?.rows,
+    normalized?.data?.items,
+    normalized?.data?.result,
+    normalized?.records,
+    normalized?.list,
+    normalized?.rows,
+    normalized?.items,
+    normalized?.result,
+    normalized?.data,
+    normalized,
+  ]
+  for (const c of candidates) {
+    const arr = parseArrayLike(c)
+    if (arr.length) return arr
+  }
+  const nested = pickFirstArray(normalized?.data)
+  if (nested.length) return nested
+  const nestedData = pickFirstArray(normalized?.data?.data)
+  if (nestedData.length) return nestedData
+  return pickFirstArray(normalized)
+}
+
+const normalizeTags = (rawTags: any): string[] => {
+  if (!rawTags) return []
+  if (Array.isArray(rawTags)) {
+    return rawTags
+      .map(t => {
+        if (typeof t === 'string') return t
+        if (typeof t === 'object' && t) return t.tagName || t.name || String(t.label || '')
+        return String(t)
+      })
+      .filter(Boolean)
+  }
+  if (typeof rawTags === 'string') return [rawTags]
+  return []
+}
+
+const normalizeArticle = (raw: any) => ({
+  ...raw,
+  id: raw?.id ?? raw?.articleId,
+  title: raw?.title ?? raw?.articleTitle ?? '',
+  summary: raw?.summary ?? raw?.description ?? raw?.intro ?? '',
+  coverImg: raw?.coverImg ?? raw?.cover ?? raw?.coverUrl ?? '',
+  category: raw?.category ?? raw?.categoryName ?? '',
+  tags: normalizeTags(raw?.tags || raw?.tagNames || raw?.tagList || raw?.tagName),
+  publishTime: raw?.publishTime ?? raw?.createTime ?? raw?.createdAt ?? '',
+  likeCount: Number(raw?.likeCount ?? raw?.likes ?? 0),
+  commentCount: Number(raw?.commentCount ?? raw?.comments ?? 0),
+  collectCount: Number(raw?.collectCount ?? raw?.bookmarks ?? 0),
+  viewCount: Number(raw?.viewCount ?? raw?.views ?? raw?.heat ?? 0),
+})
+
+const extractTotal = (payload: any, recordsLen: number): number => {
+  const normalized = normalizePayload(payload)
+  const totalRaw = normalized?.data?.data?.total
+    ?? normalized?.data?.total
+    ?? normalized?.total
+    ?? normalized?.data?.data?.totalCount
+    ?? normalized?.data?.totalCount
+    ?? normalized?.totalCount
+  const total = Number(totalRaw)
+  return Number.isFinite(total) && total >= 0 ? total : recordsLen
+}
+
 const updateSidebarStickyTop = () => {
   const sidebarEl = rightSidebarRef.value
   if (!sidebarEl) return
@@ -58,8 +181,7 @@ const updateSidebarStickyTop = () => {
 
 const fetchCategoryPage = async (catId: number | string, pageNo = 1) => {
   const catKey = String(catId)
-  const numericCatId = Number(catId)
-  if (Number.isNaN(numericCatId)) {
+  if (!catKey || catKey === 'undefined' || catKey === 'null') {
     return []
   }
   try {
@@ -67,13 +189,20 @@ const fetchCategoryPage = async (catId: number | string, pageNo = 1) => {
       params: {
         pageNo,
         pageSize: PAGE_SIZE,
-        categoryId: numericCatId,
+        // Keep long id precision by sending string directly.
+        categoryId: catKey,
       },
     })
-    const body = articlesRes.data || articlesRes
-    const data = body.data || body
-    const records = data.records || data.list || data.rows || (Array.isArray(data) ? data : [])
-    const totalCount = data.total || data.totalCount || (Array.isArray(data) ? data.length : records.length)
+    const payload = normalizePayload(articlesRes?.data || articlesRes || {})
+    const records = extractList(payload).map(normalizeArticle)
+    const totalCount = extractTotal(payload, records.length)
+    console.debug('[home] category records:', {
+      categoryId: catKey,
+      pageNo,
+      totalCount,
+      recordsLen: records.length,
+      firstRecord: records[0],
+    })
     categoryTotal[catKey] = Number(totalCount) || 0
     categoryHasMore[catKey] = pageNo * PAGE_SIZE < (categoryTotal[catKey] || records.length)
     return records
@@ -93,10 +222,26 @@ const loadNext = async (catId: number | string) => {
     return
   }
   categoryPage[catKey] = nextPage
-  categoryArticles.value[catKey] = records
+  categoryArticles.value[catKey] = [
+    ...(categoryArticles.value[catKey] || []),
+    ...records,
+  ]
+}
+
+const fetchHomeAnnouncement = async () => {
+  const announcement = await getFrontAnnouncement()
+  if (!announcement) {
+    showAnnouncement.value = false
+    return
+  }
+  announcementTitle.value = announcement.title || '网站公告'
+  announcementContent.value = announcement.content || ''
+  announcementLink.value = announcement.link || ''
+  showAnnouncement.value = !!announcement.content
 }
 
 onMounted(async () => {
+  await fetchHomeAnnouncement()
   // 分类及文章（每页显示 PAGE_SIZE 条）
   const res = await getCategories();
   categories.value = res;
@@ -284,7 +429,14 @@ onUnmounted(() => {
               
               <!-- 第一部分：最新发布 -->
               <section>
-                <AnnouncementBar :title="announcementTitle" :content="announcementContent" :link="announcementLink" :closable="false" class="mb-10" />
+                <AnnouncementBar
+                  v-if="showAnnouncement"
+                  :title="announcementTitle"
+                  :content="announcementContent"
+                  :link="announcementLink"
+                  :closable="false"
+                  class="mb-10"
+                />
                 <LatestCarousel title="推荐文章" />
               </section>
 

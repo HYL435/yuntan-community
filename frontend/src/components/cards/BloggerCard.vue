@@ -18,9 +18,87 @@
       </svg>
     </button>
     
-    <!-- 修改部分：添加了图片标签 -->
+    <!-- 中国传统文化主题插图：简约河图洛书星图（线条为主） -->
     <div class="profile-pic">
-      <img src="https://api.dicebear.com/9.x/adventurer/svg?seed=Felix" alt="User Avatar" />
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 280" aria-label="河图洛书线条星图">
+        <defs>
+          <radialGradient id="bgGrad" cx="50%" cy="50%" r="55%">
+            <stop offset="0%"   stop-color="#2a1a0a"/>
+            <stop offset="60%"  stop-color="#1a0f05"/>
+            <stop offset="100%" stop-color="#0d0804"/>
+          </radialGradient>
+          <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%"   stop-color="#f5d47a"/>
+            <stop offset="50%"  stop-color="#c9922a"/>
+            <stop offset="100%" stop-color="#f5d47a"/>
+          </linearGradient>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2.5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <circle cx="140" cy="140" r="140" fill="url(#bgGrad)"/>
+
+        <!-- 外层星图环线 -->
+        <circle cx="140" cy="140" r="114" fill="none" stroke="url(#goldGrad)" stroke-width="0.8" opacity="0.35"/>
+        <circle cx="140" cy="140" r="86" fill="none" stroke="url(#goldGrad)" stroke-width="0.9" opacity="0.42"/>
+
+        <!-- 河图：五方点位 -->
+        <g fill="#f5d47a" opacity="0.68" filter="url(#glow)">
+          <circle cx="140" cy="40" r="3"/>
+          <circle cx="140" cy="248" r="3"/>
+          <circle cx="40" cy="140" r="3"/>
+          <circle cx="248" cy="140" r="3"/>
+          <circle cx="140" cy="140" r="3.2"/>
+        </g>
+
+        <!-- 河图骨架线（十字与斜向） -->
+        <g stroke="url(#goldGrad)" stroke-width="0.9" opacity="0.34">
+          <line x1="140" y1="48" x2="140" y2="236"/>
+          <line x1="48" y1="140" x2="232" y2="140"/>
+          <line x1="76" y1="76" x2="204" y2="204"/>
+          <line x1="204" y1="76" x2="76" y2="204"/>
+        </g>
+
+        <!-- 洛书：分散九宫星点（4-9-2 / 3-5-7 / 8-1-6） -->
+        <g fill="#f5d47a" opacity="0.58">
+          <!-- 上排 4 9 2 -->
+          <circle cx="98" cy="96" r="2"/><circle cx="104" cy="102" r="2"/><circle cx="92" cy="102" r="2"/><circle cx="98" cy="108" r="2"/>
+          <circle cx="140" cy="86" r="2"/><circle cx="134" cy="92" r="2"/><circle cx="146" cy="92" r="2"/><circle cx="128" cy="98" r="2"/><circle cx="140" cy="98" r="2"/><circle cx="152" cy="98" r="2"/><circle cx="134" cy="104" r="2"/><circle cx="146" cy="104" r="2"/><circle cx="140" cy="110" r="2"/>
+          <circle cx="182" cy="96" r="2"/><circle cx="176" cy="102" r="2"/>
+
+          <!-- 中排 3 5 7 -->
+          <circle cx="110" cy="138" r="2"/><circle cx="100" cy="144" r="2"/><circle cx="110" cy="150" r="2"/>
+          <circle cx="140" cy="136" r="2"/><circle cx="134" cy="142" r="2"/><circle cx="146" cy="142" r="2"/><circle cx="136" cy="148" r="2"/><circle cx="144" cy="148" r="2"/>
+          <circle cx="170" cy="136" r="2"/><circle cx="176" cy="136" r="2"/><circle cx="182" cy="136" r="2"/><circle cx="168" cy="142" r="2"/><circle cx="174" cy="142" r="2"/><circle cx="180" cy="142" r="2"/><circle cx="174" cy="148" r="2"/>
+
+          <!-- 下排 8 1 6 -->
+          <circle cx="98" cy="178" r="2"/><circle cx="104" cy="178" r="2"/><circle cx="110" cy="178" r="2"/><circle cx="92" cy="184" r="2"/><circle cx="98" cy="184" r="2"/><circle cx="104" cy="184" r="2"/><circle cx="110" cy="184" r="2"/><circle cx="98" cy="190" r="2"/>
+          <circle cx="140" cy="182" r="2"/>
+          <circle cx="176" cy="178" r="2"/><circle cx="182" cy="178" r="2"/><circle cx="170" cy="184" r="2"/><circle cx="176" cy="184" r="2"/><circle cx="182" cy="184" r="2"/><circle cx="176" cy="190" r="2"/>
+        </g>
+
+        <!-- 星图连线（简约分散） -->
+        <g stroke="url(#goldGrad)" stroke-width="0.7" opacity="0.28">
+          <line x1="98" y1="96" x2="140" y2="86"/>
+          <line x1="140" y1="86" x2="182" y2="96"/>
+          <line x1="110" y1="150" x2="140" y2="136"/>
+          <line x1="140" y1="136" x2="174" y2="148"/>
+          <line x1="98" y1="190" x2="140" y2="182"/>
+          <line x1="140" y1="182" x2="176" y2="190"/>
+          <line x1="40" y1="140" x2="98" y2="144"/>
+          <line x1="248" y1="140" x2="182" y2="136"/>
+          <line x1="140" y1="40" x2="140" y2="86"/>
+          <line x1="140" y1="248" x2="140" y2="182"/>
+        </g>
+
+        <!-- 轻量传统装饰：上下两笔云纹 -->
+        <g fill="none" stroke="url(#goldGrad)" stroke-width="1" opacity="0.35">
+          <path d="M84,62 C92,56 104,56 111,62 C116,67 116,74 109,78"/>
+          <path d="M196,218 C188,224 176,224 169,218 C164,213 164,206 171,202"/>
+        </g>
+      </svg>
     </div>
 
     <div class="bottom">
@@ -51,7 +129,7 @@
             </svg>
           </a>
           <!-- GitHub 图标 -->
-          <a href="https://github.com/HYL435/yuntan-blog" target="_blank" rel="noopener noreferrer" title="GitHub">
+          <a href="https://github.com/HYL435/yuntan-community" target="_blank" rel="noopener noreferrer" title="GitHub">
             <svg viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"
@@ -120,13 +198,13 @@
   overflow: hidden;
   transition: all 0.5s ease-in-out 0.2s, z-index 0.5s ease-in-out 0.2s;
   
-  /* 新增：设置一个浅蓝色渐变或纯色背景，防止这里变成纯黑黑洞 */
-  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+  /* 深色仿古底色，配合线条阴阳与河图洛书图案 */
+  background: radial-gradient(ellipse at 50% 50%, #2a1a0a 0%, #0d0804 100%);
 }
 
 /* 适配暗黑模式的头像背景 */
 :global(html.dark) .card .profile-pic {
-  background: #2d3748; /* 暗色模式下的深灰底色 */
+  background: radial-gradient(ellipse at 50% 50%, #2a1a0a 0%, #0d0804 100%);
 }
 
 .card .profile-pic img {
@@ -290,7 +368,7 @@
 }
 
 .card:hover .profile-pic svg {
-  transform: scale(2.5);
+  transform: scale(1.15);
   transition: all 0.5s ease-in-out 0.5s;
 }
 
@@ -309,9 +387,9 @@ html.dark .card .mail svg:hover {
 }
 
 html.dark .card .profile-pic {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #c9922a;
   /* 确保暗色模式下背景也不黑 */
-  background: #2d3748;
+  background: radial-gradient(ellipse at 50% 50%, #2a1a0a 0%, #0d0804 100%);
 }
 
 html.dark .card:hover .profile-pic {

@@ -6,7 +6,7 @@ import com.yuntan.infra.redis.RedisConstant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-import yuntan.common.context.BaseContext;
+import com.yuntan.common.context.BaseContext;
 
 import java.time.LocalDateTime;
 

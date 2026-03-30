@@ -106,10 +106,39 @@ const formatNumber = (num?: number) => {
 };
 
 // 5. 工具函数：格式化日期 (2024-01-15T10:30:00 -> 2024-01-15)
-const formatDate = (timeStr?: string) => {
-  if (!timeStr) return '';
-  // 简单截取前10位，或者使用 dayjs 处理
-  return timeStr.substring(0, 10);
+const formatDate = (timeStr?: any) => {
+  if (timeStr === undefined || timeStr === null || timeStr === '') return '';
+
+  if (typeof timeStr === 'string') {
+    return timeStr.length >= 10 ? timeStr.substring(0, 10) : timeStr;
+  }
+
+  // Handle backend LocalDateTime serialized as array: [yyyy, MM, dd, HH, mm, ss]
+  if (Array.isArray(timeStr) && timeStr.length >= 3) {
+    const [y, m, d] = timeStr;
+    const mm = String(m).padStart(2, '0');
+    const dd = String(d).padStart(2, '0');
+    return `${y}-${mm}-${dd}`;
+  }
+
+  if (typeof timeStr === 'object') {
+    const y = timeStr.year;
+    const m = timeStr.monthValue ?? timeStr.month;
+    const d = timeStr.dayOfMonth ?? timeStr.day;
+    if (y && m && d) {
+      const mm = String(m).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      return `${y}-${mm}-${dd}`;
+    }
+    return '';
+  }
+
+  if (typeof timeStr === 'number') {
+    const date = new Date(timeStr);
+    if (!Number.isNaN(date.getTime())) return date.toISOString().substring(0, 10);
+  }
+
+  return String(timeStr);
 };
 
 // 事件处理

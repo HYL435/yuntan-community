@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-import yuntan.common.domain.Result;
+import com.yuntan.common.domain.Result;
 
 @Slf4j
 @Tag(description = "后台用户相关接口", name = "用户管理")

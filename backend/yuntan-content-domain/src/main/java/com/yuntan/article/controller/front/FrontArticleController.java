@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import yuntan.common.domain.Result;
+import com.yuntan.common.domain.Result;
 
 @Slf4j
 @RequestMapping("/front/articles")
@@ -56,6 +56,16 @@ public class FrontArticleController {
         PageDTO<ArticleExhibitFrontVO> result = articleService.pageExhibitByCategoryOrTags(articleExhibitQuery);
 
         return Result.ok(result);
+    }
+
+    @GetMapping("/count")
+    @Operation(summary = "获取文章数量")
+    public Result<Integer> getArticleCount() {
+        log.info("获取文章数量");
+
+        Integer count = Math.toIntExact(articleService.count());
+
+        return Result.ok(count);
     }
 
 }

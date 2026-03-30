@@ -24,6 +24,118 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 const isScrolledToBottom = ref(false)
 
+const pickFirstArray = (obj: any): any[] => {
+  if (!obj || typeof obj !== 'object') return []
+  const key = Object.keys(obj).find(k => Array.isArray(obj[k]))
+  return key ? obj[key] : []
+}
+
+const parseJsonSafely = (v: any): any => {
+  if (typeof v !== 'string') return v
+  try {
+    return JSON.parse(v)
+  } catch {
+    return v
+  }
+}
+
+const normalizePayload = (payload: any): any => {
+  const p = parseJsonSafely(payload)
+  if (typeof p === 'object' && p) {
+    return {
+      ...p,
+      data: parseJsonSafely((p as any).data),
+    }
+  }
+  return p
+}
+
+const extractList = (payload: any): any[] => {
+  const normalized = normalizePayload(payload)
+
+  const parseArrayLike = (v: any): any[] => {
+    const value = parseJsonSafely(v)
+    if (Array.isArray(value)) return value
+    if (value && typeof value === 'object') {
+      const values = Object.values(value)
+      if (values.length && values.every(item => typeof item === 'object' && item !== null)) {
+        return values as any[]
+      }
+    }
+    if (typeof v === 'string') {
+      try {
+        const parsed = JSON.parse(v)
+        return Array.isArray(parsed) ? parsed : []
+      } catch {
+        return []
+      }
+    }
+    return []
+  }
+
+  const candidates = [
+    normalized?.data?.data?.records,
+    normalized?.data?.data?.list,
+    normalized?.data?.data?.rows,
+    normalized?.data?.data?.items,
+    normalized?.data?.data?.result,
+    normalized?.data?.records,
+    normalized?.data?.list,
+    normalized?.data?.rows,
+    normalized?.data?.items,
+    normalized?.data?.result,
+    normalized?.records,
+    normalized?.list,
+    normalized?.rows,
+    normalized?.items,
+    normalized?.result,
+    normalized?.data,
+    normalized,
+  ]
+  for (const c of candidates) {
+    const arr = parseArrayLike(c)
+    if (arr.length) return arr
+  }
+  const nested = pickFirstArray(normalized?.data)
+  if (nested.length) return nested
+  const nestedData = pickFirstArray(normalized?.data?.data)
+  if (nestedData.length) return nestedData
+  return pickFirstArray(normalized)
+}
+
+const normalizeTags = (rawTags: any): string[] => {
+  if (!rawTags) return []
+  if (Array.isArray(rawTags)) {
+    return rawTags
+      .map(t => {
+        if (typeof t === 'string') return t
+        if (typeof t === 'object' && t) return t.tagName || t.name || String(t.label || '')
+        return String(t)
+      })
+      .filter(Boolean)
+  }
+  if (typeof rawTags === 'string') return [rawTags]
+  return []
+}
+
+const normalizeArticle = (raw: any) => {
+  const tags = normalizeTags(raw?.tags || raw?.tagNames || raw?.tagList || raw?.tagName)
+  return {
+    ...raw,
+    id: raw?.id ?? raw?.articleId,
+    title: raw?.title ?? raw?.articleTitle ?? '',
+    summary: raw?.summary ?? raw?.description ?? raw?.intro ?? '',
+    coverImg: raw?.coverImg ?? raw?.cover ?? raw?.coverUrl ?? '',
+    category: raw?.category ?? raw?.categoryName ?? '',
+    tags,
+    publishTime: raw?.publishTime ?? raw?.createTime ?? raw?.createdAt ?? '',
+    likeCount: Number(raw?.likeCount ?? raw?.likes ?? 0),
+    commentCount: Number(raw?.commentCount ?? raw?.comments ?? 0),
+    collectCount: Number(raw?.collectCount ?? raw?.bookmarks ?? 0),
+    viewCount: Number(raw?.viewCount ?? raw?.views ?? raw?.heat ?? 0),
+  }
+}
+
 // 获取推荐文章
 const fetchRecommendedArticles = async (pageNo: number = 1) => {
   loading.value = true
@@ -35,32 +147,8 @@ const fetchRecommendedArticles = async (pageNo: number = 1) => {
       },
     })
 
-    const data = response.data || {}
-    console.log('API response:', data)
-    console.log('API response keys:', Object.keys(data))
-    console.log('data.data:', data.data)
-    console.log('data.code:', data.code)
-    
-    // 处理返回的数据结构 - 优先检查内部属性
-    let result: any[] = []
-    
-    if (data.data) {
-      if (Array.isArray(data.data)) {
-        result = data.data
-      } else if (data.data.records && Array.isArray(data.data.records)) {
-        result = data.data.records
-      } else if (data.data.list && Array.isArray(data.data.list)) {
-        result = data.data.list
-      } else if (typeof data.data === 'object') {
-        // 如果是对象，尝试获取第一个数组属性
-        const firstArrayKey = Object.keys(data.data).find(key => Array.isArray(data.data[key]))
-        if (firstArrayKey) {
-          result = data.data[firstArrayKey]
-        }
-      }
-    } else if (Array.isArray(data)) {
-      result = data
-    }
+    const payload = normalizePayload(response?.data || response || {})
+    const result = extractList(payload).map(normalizeArticle)
     
     // 如果是第一页，替换数据；否则追加数据
     if (pageNo === 1) {
@@ -71,13 +159,22 @@ const fetchRecommendedArticles = async (pageNo: number = 1) => {
     
     // 记录分页信息
     currentPage.value = pageNo
-    if (data.data && data.data.pages) {
-      totalPages.value = parseInt(data.data.pages)
-    }
+    const pagesRaw = payload?.data?.data?.pages
+      ?? payload?.data?.pages
+      ?? payload?.pages
+      ?? payload?.data?.data?.pageTotal
+      ?? payload?.data?.pageTotal
+      ?? payload?.pageTotal
+    totalPages.value = Number(pagesRaw) > 0 ? Number(pagesRaw) : totalPages.value
     
     console.log('Final articles:', articles.value)
     console.log('Articles count:', articles.value.length)
     console.log('Total pages:', totalPages.value)
+    console.debug('[carousel] parsed result:', {
+      pageNo,
+      resultLen: result.length,
+      firstRecord: result[0],
+    })
   } catch (err) {
     console.error('Failed to fetch articles:', err)
     if (currentPage.value === 1) {

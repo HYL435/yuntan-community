@@ -6,7 +6,7 @@ import com.yuntan.infra.client.map.ip.dto.IpLocationDTO;
 import com.yuntan.infra.client.map.ip.service.IpLocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import yuntan.common.exception.BusinessException;
+import com.yuntan.common.exception.BusinessException;
 
 @Service
 @RequiredArgsConstructor

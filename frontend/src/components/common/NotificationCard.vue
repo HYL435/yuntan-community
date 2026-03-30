@@ -230,22 +230,28 @@ const getIcon = () => {
 .sub-text {
   margin: 0;
   cursor: default;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .message-text {
   color: var(--text-color);
   font-size: 15px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.4;
+  /* 主标题完整展示，不截断 */
+  white-space: normal;
 }
 
 .sub-text {
   font-size: 13px;
   color: var(--subtext-color);
   margin-top: 4px;
+  /* 副文本最多显示 2 行，超出末尾省略 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .cross-icon {

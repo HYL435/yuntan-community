@@ -5,6 +5,8 @@ import OptionButton from "@/components/common/OptionButton.vue";
 import DarkButton from "@/components/common/DarkButton.vue";
 import UserProfile from "@/components/common/UserProfile.vue";
 import BackTopButton from "@/components/common/BackTopButton.vue";
+import { getCategories } from "@/api/category";
+import http from "@/api/http";
 
 const showTransparentHeader = ref(true);
 const showStickyHeader = ref(false);
@@ -22,29 +24,88 @@ const toggleMenu = () => {
   document.body.style.overflow = isMenuOpen.value ? "hidden" : "";
 };
 
-const handleOptionClick = (linkName: string, option: string) => {
+const handleOptionClick = async (linkName: string, option: string) => {
   if (linkName === "文章") {
     if (!option) return;
     if (option === "首页") { router.push("/"); return; }
-    router.push(`/tag/${encodeURIComponent(option)}`);
+    if (option === "标签") { 
+      try {
+        const firstTag = await getFirstTag();
+        if (firstTag) {
+          router.push(`/tag/${encodeURIComponent(firstTag)}`);
+        }
+      } catch (error) {
+        console.error('获取第一个标签失败:', error);
+      }
+      return; 
+    }
+    // 文章菜单中的分类项统一跳转到分类页
+    router.push({
+      path: '/categories',
+      query: { name: option }
+    })
+    return;
+  }
+  if (linkName === "关于") {
+    if (option === "关于本站") { router.push('/about/site'); return; }
+    if (option === "关于博主") { router.push('/about/author'); return; }
     return;
   }
   if (linkName === "社交") {
     if (option === "留言板") { router.push("/message-board"); return; }
+    if (option === "友链") { router.push('/friend-links'); return; }
+    return;
+  }
+  if (linkName === "更多") {
+    if (option === "藏书阁") { router.push('/bookshelf'); return; }
+    if (option === "工具箱") { router.push('/toolbox'); return; }
     return;
   }
 };
 
-const navLinks = [
-  { name: "文章", href: "#super_container", options: ["首页", "标签"] },
+// 获取第一个标签名称
+const getFirstTag = async (): Promise<string | null> => {
+  try {
+    const res = await http.get('/front/tags');
+    const tags = Array.isArray(res.data?.data) ? res.data.data : [];
+    if (tags.length > 0 && tags[0].tagName) {
+      return tags[0].tagName;
+    }
+    return null;
+  } catch (error) {
+    console.error('获取标签列表失败:', error);
+    return null;
+  }
+};
+
+const navLinks = ref([
+  { name: "文章", href: "#super_container", options: ["首页"] },
   { name: "关于", href: "#about", options: ["关于本站", "关于博主"] },
   { name: "社交", href: "#contact", options: ["留言板", "友链"] },
-  { name: "更多", href: "#more", options: ["藏宝阁", "工具箱"] },
-];
+  { name: "更多", href: "#more", options: ["藏书阁", "工具箱"] },
+]);
+
+// 从后端获取分类列表
+const loadCategoriesIntoNav = async () => {
+  try {
+    const categories = await getCategories();
+    if (Array.isArray(categories) && categories.length > 0) {
+      const categoryNames = categories.map(cat => cat.categoryName);
+      // 在首页后插入所有分类，最后是"标签"选项
+      const articleNavIndex = navLinks.value.findIndex(link => link.name === "文章");
+      if (articleNavIndex !== -1) {
+        navLinks.value[articleNavIndex].options = ["首页", ...categoryNames, "标签"];
+      }
+    }
+  } catch (error) {
+    console.error('获取分类失败:', error);
+  }
+};
 
 onMounted(() => {
   handleScroll();
   window.addEventListener("scroll", handleScroll);
+  loadCategoriesIntoNav();
 });
 
 onUnmounted(() => {
@@ -62,18 +123,15 @@ onUnmounted(() => {
     >
       <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between">
-          <RouterLink to="/" class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-white text-black flex items-center justify-center rounded-sm">
-               <span class="font-bold">Logo</span>
-            </div>
-            <span class="text-2xl font-extrabold text-white">云 坛</span>
+          <RouterLink to="/" class="flex items-center">
+            <span class="brand-title text-5xl text-white">雲壇</span>
           </RouterLink>
 
           <div class="hidden md:flex items-center gap-8">
             <nav>
               <ul class="flex items-center gap-8">
                 <li v-for="link in navLinks" :key="link.name" class="relative group h-full flex items-center">
-                  <a :href="link.href" class="relative group/link text-lg font-medium text-white hover:text-gray-200 transition-colors py-2">
+                  <a :href="link.href" class="header-main-link header-main-link--transparent relative group/link text-lg font-medium transition-colors py-2">
                     {{ link.name }}
                     <span class="nav-underline absolute -bottom-1 left-0 h-0.5 bg-white"></span>
                   </a>
@@ -108,18 +166,15 @@ onUnmounted(() => {
     >
       <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between">      
-          <RouterLink to="/" class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-black text-white flex items-center justify-center rounded-sm">
-               <span class="font-bold">Logo</span>
-            </div>
-            <span class="text-2xl font-extrabold text-black">云 坛</span>
+          <RouterLink to="/" class="flex items-center">
+            <span class="brand-title text-5xl text-black">雲壇</span>
           </RouterLink>
 
           <div class="hidden md:flex items-center gap-8">
             <nav>
               <ul class="flex items-center gap-8">
                 <li v-for="link in navLinks" :key="link.name" class="relative group h-full flex items-center">
-                  <a :href="link.href" class="relative group/link text-lg font-medium text-black hover:text-gray-600 transition-colors py-2">
+                  <a :href="link.href" class="header-main-link header-main-link--light relative group/link text-lg font-medium transition-colors py-2">
                     {{ link.name }}
                     <span class="nav-underline absolute -bottom-1 left-0 h-0.5 bg-black"></span>
                   </a>
@@ -172,6 +227,39 @@ onUnmounted(() => {
 .header-slide {
   transition: transform 1s cubic-bezier(0.19,1,0.22,1), translate 1s cubic-bezier(0.19,1,0.22,1) !important;
   will-change: transform;
+}
+
+.header-main-link,
+.header-main-link:visited {
+  text-decoration: none;
+}
+
+.brand-title {
+  font-family: 'STXingkai', 'FZShuTi', 'HanziPen SC', 'KaiTi', 'Kaiti SC', 'STKaiti', 'DFKai-SB', 'LiSu', cursive;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  line-height: 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.header-main-link--transparent,
+.header-main-link--transparent:visited {
+  color: rgba(241, 245, 249, 0.95);
+  text-shadow: 0 1px 14px rgba(15, 23, 42, 0.45);
+}
+
+.header-main-link--transparent:hover {
+  color: #ffffff;
+}
+
+.header-main-link--light,
+.header-main-link--light:visited {
+  color: #0f172a;
+}
+
+.header-main-link--light:hover {
+  color: #1d4ed8;
 }
 
 .nav-underline {

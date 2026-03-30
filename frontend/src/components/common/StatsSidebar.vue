@@ -8,7 +8,7 @@
 
     <div class="grid grid-cols-2 gap-3">
       <!-- 文章 (占据较大空间) -->
-      <div class="col-span-2 relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-4 text-white shadow-lg shadow-indigo-500/20">
+      <div class="col-span-2 relative overflow-hidden rounded-2xl bg-linear-to-br from-indigo-500 to-purple-600 p-4 text-white shadow-lg shadow-indigo-500/20">
         <div class="absolute right-0 top-0 opacity-10 transform translate-x-2 -translate-y-2">
           <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
         </div>
@@ -48,8 +48,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import http from '@/api/http'
-import { getAdminStats } from '@/api/stats'
+import { getAdminStats, getArticleCount } from '@/api/stats'
 import { getCategories } from '@/api/category'
 
 const articleCount = ref<number | null>(null)
@@ -62,11 +61,7 @@ const todayVisitsDisplay = computed(() => (todayVisits.value === null ? '—' : 
 
 async function fetchArticleCount() {
   try {
-    const res = await http.get('/front/articles/page/categoryOrTags', { params: { pageNo: 1, pageSize: 1 } })
-    const body = res.data || res
-    const data = body.data || body
-    const total = data?.total ?? (Array.isArray(data) ? data.length : undefined)
-    articleCount.value = typeof total === 'number' ? total : null
+    articleCount.value = await getArticleCount()
   } catch (e) {
     articleCount.value = null
   }

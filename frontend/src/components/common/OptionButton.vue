@@ -12,13 +12,14 @@
 .uiverse-btn {
   align-items: center;
   background-color: transparent;
-  color: #fff; /* 注意：字体是白色的 */
+  color: #f8fafc;
   cursor: pointer;
   display: flex;
   justify-content: center; /* 添加水平居中 */
   font-family: ui-sans-serif,system-ui,-apple-system,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
   font-size: 0.85rem; /*稍微减小字号*/
   font-weight: 700;
+  text-shadow: 0 1px 10px rgba(15, 23, 42, 0.6);
   line-height: 1.5;
   text-decoration: none;
   text-transform: uppercase;
@@ -42,5 +43,9 @@
 .uiverse-btn:hover:before {
   background-color: #fff;
   width: 2rem; /* 伸长长度 */
+}
+
+.uiverse-btn:hover {
+  color: #ffffff;
 }
 </style>

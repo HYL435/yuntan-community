@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import yuntan.common.domain.Result;
+import com.yuntan.common.domain.Result;
 
 @Slf4j
 @RequestMapping("/front/views")

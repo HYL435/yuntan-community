@@ -16,6 +16,17 @@ export const getAdminStats = async (): Promise<AdminStatsResponse> => {
   return res.data || {}
 }
 
+export const getArticleCount = async (): Promise<number | null> => {
+  const res = await http.get('/front/articles/count')
+  const body = res?.data ?? res
+
+  if (typeof body === 'number') return body
+  if (typeof body?.data === 'number') return body.data
+
+  return null
+}
+
 export default {
-  getAdminStats
+  getAdminStats,
+  getArticleCount
 }

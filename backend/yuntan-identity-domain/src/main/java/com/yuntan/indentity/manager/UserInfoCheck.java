@@ -2,8 +2,8 @@ package com.yuntan.indentity.manager;
 
 import com.yuntan.indentity.entity.User;
 import org.springframework.util.StringUtils;
-import yuntan.common.constant.MessageConstant;
-import yuntan.common.exception.BusinessException;
+import com.yuntan.common.constant.MessageConstant;
+import com.yuntan.common.exception.BusinessException;
 
 public class UserInfoCheck {
 

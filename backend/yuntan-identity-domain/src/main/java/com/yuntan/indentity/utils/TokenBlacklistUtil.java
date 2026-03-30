@@ -5,7 +5,7 @@ import com.yuntan.indentity.config.JwtProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-import yuntan.common.constant.RedisKeyConstant;
+import com.yuntan.common.constant.RedisKeyConstant;
 
 import java.util.concurrent.TimeUnit;
 

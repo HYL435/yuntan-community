@@ -62,11 +62,38 @@ http.interceptors.response.use(
     return response;
   },
   (error) => {
+    // ── 网络层错误（服务器完全不可达、超时、CORS 预检失败等）──
+    if (!error.response) {
+      // 标记为网络错误，方便上层区分
+      ;(error as any).isNetworkError = true
+      error.message = '网络连接失败，请检查您的网络或稍后再试'
+
+      // 只要不是静默请求（_silent: true），就广播事件让 App.vue 决定是否跳转
+      if (!(error.config as any)?._silent) {
+        try {
+          window.dispatchEvent(new CustomEvent('app:network-error', {
+            detail: { url: error.config?.url }
+          }))
+        } catch (_) {}
+      }
+
+      return Promise.reject(error)
+    }
+
+    // ── 有 HTTP 响应，提取后端真实 message 覆盖 Axios 的通用错误描述 ──
+    const backendMsg: string | undefined =
+      error.response?.data?.message ||
+      error.response?.data?.msg ||
+      error.response?.data?.error
+    if (backendMsg) {
+      // 让所有 catch(e) { e.message } 直接拿到后端中文提示
+      error.message = backendMsg
+      // 挂载便于区分 Axios 原始状态码
+      ;(error as any).backendMessage = backendMsg
+    }
+
     // 只在某些特定情况下处理 401 错误
-    // 一般来说，获取文章等公开操作不需要登录，所以不自动重定向
-    // 如果需要在某些页面处理 401，由业务逻辑决定
     if (error.response?.status === 401) {
-      // token 过期或无效，只清除本地存储，不自动重定向
       console.warn('[http] 401 响应，移除 auth_token')
       localStorage.removeItem('auth_token');
     }

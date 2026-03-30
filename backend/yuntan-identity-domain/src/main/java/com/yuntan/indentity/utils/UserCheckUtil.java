@@ -7,8 +7,8 @@ import com.yuntan.indentity.entity.User;
 import com.yuntan.indentity.manager.UserInfoCheck;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import yuntan.common.constant.MessageConstant;
-import yuntan.common.exception.BusinessException;
+import com.yuntan.common.constant.MessageConstant;
+import com.yuntan.common.exception.BusinessException;
 
 @Component
 public class UserCheckUtil {

@@ -57,9 +57,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import http from '@/api/http'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useIsDark } from '@/composables/useIsDark'
 
 const loading = ref(false)
 const categories = ref<Array<any>>([])
@@ -72,7 +73,7 @@ const rules = {
   categoryName: [{ required: true, message: '请输入分类名称', trigger: 'blur' }]
 }
 
-const isDark = computed(() => document.documentElement.classList.contains('dark'))
+const isDark = useIsDark()
 
 const formatDate = (v: any) => {
   if (!v && v !== 0) return '-'

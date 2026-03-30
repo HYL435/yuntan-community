@@ -13,7 +13,7 @@ import com.yuntan.tag.vo.TagFrontVO;
 import com.yuntan.tag.vo.TagVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import yuntan.common.utils.BeanUtils;
+import com.yuntan.common.utils.BeanUtils;
 
 import java.util.List;
 

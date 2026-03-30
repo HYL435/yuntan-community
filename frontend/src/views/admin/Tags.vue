@@ -53,9 +53,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import http from '@/api/http'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useIsDark } from '@/composables/useIsDark'
 
 const loading = ref(false)
 const tags = ref<Array<any>>([])
@@ -68,7 +69,7 @@ const rules = {
   tagName: [{ required: true, message: '请输入标签名称', trigger: 'blur' }]
 }
 
-const isDark = computed(() => document.documentElement.classList.contains('dark'))
+const isDark = useIsDark()
 
 const fetchList = async () => {
   loading.value = true

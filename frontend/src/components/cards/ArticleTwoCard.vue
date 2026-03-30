@@ -153,9 +153,39 @@ const handleClick = () => {
   emit('click', props.articleId);
 };
 
-const formatDate = (dateStr?: string) => {
-  if (!dateStr) return '';
-  return dateStr.split('T')[0];
+const formatDate = (dateStr?: any) => {
+  if (dateStr === undefined || dateStr === null || dateStr === '') return '';
+
+  if (typeof dateStr === 'string') {
+    return dateStr.includes('T') ? dateStr.split('T')[0] : (dateStr.length >= 10 ? dateStr.slice(0, 10) : dateStr);
+  }
+
+  // Handle backend LocalDateTime serialized as array: [yyyy, MM, dd, HH, mm, ss]
+  if (Array.isArray(dateStr) && dateStr.length >= 3) {
+    const [y, m, d] = dateStr;
+    const mm = String(m).padStart(2, '0');
+    const dd = String(d).padStart(2, '0');
+    return `${y}-${mm}-${dd}`;
+  }
+
+  if (typeof dateStr === 'object') {
+    const y = dateStr.year;
+    const m = dateStr.monthValue ?? dateStr.month;
+    const d = dateStr.dayOfMonth ?? dateStr.day;
+    if (y && m && d) {
+      const mm = String(m).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      return `${y}-${mm}-${dd}`;
+    }
+    return '';
+  }
+
+  if (typeof dateStr === 'number') {
+    const date = new Date(dateStr);
+    if (!Number.isNaN(date.getTime())) return date.toISOString().slice(0, 10);
+  }
+
+  return String(dateStr);
 };
 </script>
 

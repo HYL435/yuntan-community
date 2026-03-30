@@ -2,8 +2,9 @@
   <div class="min-h-screen bg-gray-50 dark:bg-[#121212] pt-16 pb-8">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- 加载状态 -->
-      <div v-if="isLoading" class="text-center py-20">
-        <p class="text-xl text-gray-600 dark:text-gray-400">加载中...</p>
+      <div v-if="isLoading" class="flex flex-col items-center justify-center gap-3 py-20">
+        <LoadingPulse />
+        <p class="text-sm text-gray-500 dark:text-gray-400">正在加载资料...</p>
       </div>
 
       <!-- 错误状态 -->
@@ -163,6 +164,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useNotification } from '@/composables/useNotification'
 import AnimatedCubes from '@/components/separate/AnimatedCubes.vue'
+import LoadingPulse from '@/components/loaders/LoadingPulse.vue'
 
 const router = useRouter()
 const userStore = useUserStore()

@@ -1,8 +1,9 @@
 <script setup lang="ts" name="TagView">
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import TagArticleCard from '@/components/cards/TagArticleCard.vue';
 import HotTagsSidebar from '@/components/common/HotTagsSidebar.vue';
+import LoadingPulse from '@/components/loaders/LoadingPulse.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -21,8 +22,22 @@ interface TagFrontVO {
 }
 
 const tabs = ref<TagFrontVO[]>([]);
+const isDarkPage = ref(false);
+let darkObserver: MutationObserver | null = null;
+
+const syncDarkState = () => {
+  const html = document.documentElement;
+  isDarkPage.value =
+    html.classList.contains('dark') ||
+    html.classList.contains('dark-mode') ||
+    localStorage.getItem('dark-mode') === 'true';
+};
 
 onMounted(async () => {
+  syncDarkState();
+  darkObserver = new MutationObserver(() => syncDarkState());
+  darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
   try {
     const tagRes = await import('@/api/http').then(m => m.default.get('/front/tags'));
     if (Array.isArray(tagRes.data?.data)) {
@@ -40,6 +55,13 @@ onMounted(async () => {
     }
   } catch (e) {
     tabs.value = [];
+  }
+});
+
+onUnmounted(() => {
+  if (darkObserver) {
+    darkObserver.disconnect();
+    darkObserver = null;
   }
 });
 
@@ -120,8 +142,8 @@ const goToArticle = (id: string) => {
 </script>
 
 <template>
-  <div class="tag-page min-h-screen bg-[#F7F9FE] dark:bg-[#121212] text-slate-900 dark:text-white flex">
-    <div class="hidden md:block w-64 flex-shrink-0 pt-28">
+  <div class="tag-page min-h-screen text-slate-900 dark:text-white flex" :class="{ 'tag-page--dark': isDarkPage }">
+    <div class="hidden md:block w-64 shrink-0 pt-28">
       <HotTagsSidebar :tags="tabs" :goToTag="goToTag" />
     </div>
     <div class="flex-1 max-w-6xl mx-auto px-4 md:px-6 pt-28 pb-16">
@@ -131,7 +153,10 @@ const goToArticle = (id: string) => {
       </div>
 
       <div class="mt-8 space-y-6">
-        <div v-if="loading" class="text-center text-gray-400 py-8">加载中...</div>
+        <div v-if="loading" class="flex flex-col items-center justify-center gap-3 py-8 text-gray-400">
+          <LoadingPulse />
+          <span class="text-sm text-gray-500 dark:text-gray-400">正在加载文章...</span>
+        </div>
         <div v-else-if="!articles.length" class="text-center text-gray-400 py-8">暂无文章</div>
         <TagArticleCard
           v-for="(article, index) in articles"
@@ -157,11 +182,28 @@ const goToArticle = (id: string) => {
 
 <style scoped>
 .tag-page {
-  background-image: radial-gradient(circle at top, rgba(15, 23, 42, 0.08), transparent 45%);
+  background-color: #bfdbfe;
+  background-image:
+    linear-gradient(180deg, #93c5fd 0%, #bfdbfe 52%, #e0f2fe 100%);
 }
 
 :global(html.dark) .tag-page {
-  background-image: radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 45%);
+  background-color: #0a1530;
+  background-image:
+    linear-gradient(180deg, #050b18 0%, #0a1530 48%, #1e3a5f 100%);
+}
+
+:global(body.dark) .tag-page,
+:global(html.dark-mode) .tag-page,
+:global(body.dark-mode) .tag-page {
+  background-color: #0a1530;
+  background-image:
+    linear-gradient(180deg, #050b18 0%, #0a1530 48%, #1e3a5f 100%);
+}
+
+.tag-page--dark {
+  background-color: #0a1530 !important;
+  background-image: linear-gradient(180deg, #050b18 0%, #0a1530 48%, #1e3a5f 100%) !important;
 }
 
 .tabs-wrap {

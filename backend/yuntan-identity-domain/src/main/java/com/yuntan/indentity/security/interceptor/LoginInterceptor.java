@@ -9,8 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-import yuntan.common.context.BaseContext;
-import yuntan.common.exception.BusinessException;
+import com.yuntan.common.context.BaseContext;
+import com.yuntan.common.exception.BusinessException;
 
 import java.io.IOException;
 import java.util.Map;

@@ -2,11 +2,103 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="/image.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>frontend</title>
+    <style>
+      #app-boot-loading {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 10px;
+        background:
+          radial-gradient(42rem 24rem at 12% 14%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 62%),
+          radial-gradient(38rem 20rem at 88% 82%, rgba(148, 163, 184, 0.25), rgba(148, 163, 184, 0) 66%),
+          linear-gradient(135deg, rgba(255, 255, 255, 0.42), rgba(241, 245, 249, 0.34));
+        backdrop-filter: blur(14px) saturate(120%);
+        -webkit-backdrop-filter: blur(14px) saturate(120%);
+        opacity: 1;
+        transition: opacity 0.22s ease;
+      }
+
+      #app-boot-loading::before {
+        content: "";
+        position: absolute;
+        inset: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.12));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.55),
+          0 18px 44px rgba(15, 23, 42, 0.08);
+      }
+
+      #app-boot-loading > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      #app-boot-loading.is-exit {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #app-boot-loading .boot-text {
+        font: 500 13px/1.4 "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: #475569;
+        letter-spacing: 0.04em;
+        text-shadow: 0 1px 10px rgba(255, 255, 255, 0.35);
+      }
+
+      #app-boot-loading .loading {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #app-boot-loading .loading svg polyline {
+        fill: none;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      #app-boot-loading .loading svg polyline#back {
+        stroke: #ff4d5033;
+      }
+
+      #app-boot-loading .loading svg polyline#front {
+        stroke: #ff4d4f;
+        stroke-dasharray: 48, 144;
+        stroke-dashoffset: 192;
+        animation: boot_dash_682 1.4s linear infinite;
+      }
+
+      @keyframes boot_dash_682 {
+        72.5% {
+          opacity: 0;
+        }
+
+        to {
+          stroke-dashoffset: 0;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="app-boot-loading" aria-label="loading" role="status">
+      <div class="loading">
+        <svg width="64" height="48" viewBox="0 0 64 48">
+          <polyline points="0.157 23.954, 14 23.954, 21.843 48, 43 0, 50 24, 64 24" id="back"></polyline>
+          <polyline points="0.157 23.954, 14 23.954, 21.843 48, 43 0, 50 24, 64 24" id="front"></polyline>
+        </svg>
+      </div>
+      <div class="boot-text">页面加载中...</div>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

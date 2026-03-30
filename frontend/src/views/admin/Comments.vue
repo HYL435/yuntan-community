@@ -53,14 +53,12 @@
       v-if="contextMenuVisible"
       ref="menuRef"
       :style="contextMenuStyle"
-      class="z-50 bg-white dark:bg-[#0f172a] border rounded shadow-md py-1 w-44"
+      :class="['ctx-menu', menuIsDark ? 'ctx-menu--dark' : 'ctx-menu--light']"
       @click.stop
     >
-      <div class="flex flex-col text-sm">
-        <button class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#0b1220] rounded text-gray-700 dark:text-gray-200" @click="onContextApprove">审核通过</button>
-        <button class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#0b1220] rounded text-gray-700 dark:text-gray-200" @click="onContextReject">拒绝</button>
-        <button class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#0b1220] rounded text-red-600" @click="onContextDelete">删除评论</button>
-      </div>
+      <button class="ctx-item" @click="onContextApprove">审核通过</button>
+      <button class="ctx-item" @click="onContextReject">拒绝</button>
+      <button class="ctx-item ctx-item--danger" @click="onContextDelete">删除评论</button>
     </div>
 
     <div class="mt-6 flex justify-end">
@@ -72,10 +70,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
 import { updateCommentStatus, deleteComment as apiDeleteComment } from '@/api/comment'
+import { useIsDark } from '@/composables/useIsDark'
 
 type CommentAdmin = {
   id?: number
@@ -95,7 +94,7 @@ type CommentAdmin = {
 const loading = ref(false)
 const tableData = ref<CommentAdmin[]>([])
 const total = ref(0)
-const isDark = computed(() => document.documentElement.classList.contains('dark'))
+const isDark = useIsDark()
 
 const queryParams = reactive({ current: 1, size: 10, title: '', nickname: '', status: undefined as number | undefined })
 
@@ -158,6 +157,7 @@ const menuRef = ref<HTMLElement | null>(null)
 const contextMenuVisible = ref(false)
 const contextMenuRow = ref<CommentAdmin | null>(null)
 const contextMenuStyle = reactive<Record<string, string>>({ left: '0px', top: '0px', position: 'fixed' })
+const menuIsDark = ref(false)
 
 const hideContextMenu = () => {
   contextMenuVisible.value = false
@@ -169,6 +169,7 @@ const _docClickHandler = () => hideContextMenu()
 const handleRowContextmenu = (row: CommentAdmin, _column: any, event: MouseEvent) => {
   event.preventDefault()
   event.stopPropagation()
+  menuIsDark.value = document.documentElement.classList.contains('dark')
   contextMenuRow.value = row
   let left = event.clientX
   let top = event.clientY
@@ -261,4 +262,32 @@ const onContextDelete = async () => {
   background-color: #1e293b;
   color: #e2e8f0;
 }
+.ctx-menu {
+  z-index: 50;
+  border-radius: 6px;
+  padding: 4px 0;
+  width: 11rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.ctx-menu--light { background-color: #ffffff; border: 1px solid #e5e7eb; }
+.ctx-menu--dark  { background-color: #1e293b; border: 1px solid #334155; }
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition: background-color 0.15s;
+}
+.ctx-menu--light .ctx-item { color: #374151; }
+.ctx-menu--light .ctx-item:hover { background-color: #f3f4f6; }
+.ctx-menu--dark  .ctx-item { color: #e2e8f0; }
+.ctx-menu--dark  .ctx-item:hover { background-color: #0f172a; }
+.ctx-item--danger { color: #ef4444 !important; }
 </style>

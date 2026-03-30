@@ -74,15 +74,13 @@
       v-if="contextMenuVisible"
       ref="menuRef"
       :style="contextMenuStyle"
-      class="z-50 bg-white dark:bg-[#0f172a] border rounded shadow-md py-1 w-40"
+      :class="['ctx-menu', menuIsDark ? 'ctx-menu--dark' : 'ctx-menu--light']"
       @click.stop
     >
-      <div class="flex flex-col text-sm">
-        <button class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#0b1220] rounded text-gray-700 dark:text-gray-200" @click="onContextEdit">编辑文章</button>
-        <button class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#0b1220] rounded text-gray-700 dark:text-gray-200" @click="onContextToggleTop">{{ isContextRowTop ? '取消置顶' : '置顶文章' }}</button>
-        <button class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#0b1220] rounded text-gray-700 dark:text-gray-200" @click="onContextOpenStatusDialog">修改状态</button>
-        <button class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#0b1220] rounded text-red-600" @click="onContextDelete">删除文章</button>
-      </div>
+      <button class="ctx-item" @click="onContextEdit">编辑文章</button>
+      <button class="ctx-item" @click="onContextToggleTop">{{ isContextRowTop ? '取消置顶' : '置顶文章' }}</button>
+      <button class="ctx-item" @click="onContextOpenStatusDialog">修改状态</button>
+      <button class="ctx-item ctx-item--danger" @click="onContextDelete">删除文章</button>
     </div>
 
     <!-- 修改状态对话框 -->
@@ -115,6 +113,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
+import { useIsDark } from '@/composables/useIsDark'
 
 type ArticleAdmin = {
   id?: number
@@ -136,7 +135,7 @@ type ArticleAdmin = {
 const loading = ref(false)
 const tableData = ref<ArticleAdmin[]>([])
 const total = ref(0)
-const isDark = computed(() => document.documentElement.classList.contains('dark'))
+const isDark = useIsDark()
 
 const queryParams = reactive({ current: 1, size: 10, title: '', category: '', isOriginal: undefined as number | undefined, status: undefined as number | undefined })
 
@@ -227,6 +226,7 @@ const menuRef = ref<HTMLElement | null>(null)
 const contextMenuVisible = ref(false)
 const contextMenuRow = ref<ArticleAdmin | null>(null)
 const contextMenuStyle = reactive<Record<string, string>>({ left: '0px', top: '0px', position: 'fixed' })
+const menuIsDark = ref(false)
 
 const hideContextMenu = () => {
   contextMenuVisible.value = false
@@ -238,6 +238,7 @@ const _docClickHandler = () => hideContextMenu()
 const handleRowContextmenu = (row: ArticleAdmin, _column: any, event: MouseEvent) => {
   event.preventDefault()
   event.stopPropagation()
+  menuIsDark.value = document.documentElement.classList.contains('dark')
   contextMenuRow.value = row
   let left = event.clientX
   let top = event.clientY
@@ -357,4 +358,32 @@ const onContextDelete = async () => {
   background-color: #1e293b;
   color: #e2e8f0;
 }
+.ctx-menu {
+  z-index: 50;
+  border-radius: 6px;
+  padding: 4px 0;
+  width: 10rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.ctx-menu--light { background-color: #ffffff; border: 1px solid #e5e7eb; }
+.ctx-menu--dark  { background-color: #1e293b; border: 1px solid #334155; }
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition: background-color 0.15s;
+}
+.ctx-menu--light .ctx-item { color: #374151; }
+.ctx-menu--light .ctx-item:hover { background-color: #f3f4f6; }
+.ctx-menu--dark  .ctx-item { color: #e2e8f0; }
+.ctx-menu--dark  .ctx-item:hover { background-color: #0f172a; }
+.ctx-item--danger { color: #ef4444 !important; }
 </style>

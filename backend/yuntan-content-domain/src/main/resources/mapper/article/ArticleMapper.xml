@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.yuntan.article.mapper.ArticleMapper">
+<mapper namespace="com.yuntan.content.article.mapper.ArticleMapper">
 
     <!-- 批量更新互动数据 -->
     <update id="updateInteractBatch">
@@ -42,7 +42,7 @@
 
     <!--    根据标签或分类分页查询文章-->
     <select id="selectArticleWithCategory"
-            resultType="com.yuntan.article.vo.ArticleExhibitFrontVO">
+            resultType="com.yuntan.content.article.vo.ArticleExhibitFrontVO">
         SELECT DISTINCT
         a.*
         FROM article a

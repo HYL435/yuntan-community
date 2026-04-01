@@ -12,6 +12,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql      # Docker 卷管理
       - ../data/mysql:/var/lib/mysql   # 本地挂载，开发可直接访问
+      - ../sql:/docker-entrypoint-initdb.d  # 初始化 SQL 脚本
     networks:
       - yuntan-network
     restart: unless-stopped

@@ -8,7 +8,8 @@ import { validateLoginUser } from '@/utils/validators';
 
 const router = useRouter();
 const userStore = useUserStore();
-const { success, error } = useNotification();
+const { success, error, warning } = useNotification();
+const AUTH_EXPIRED_NOTICE_KEY = 'auth_expired_notice';
 
 const username = ref('');
 const password = ref('');
@@ -72,6 +73,12 @@ const syncDarkMode = () => {
 
 let observer: MutationObserver | null = null;
 onMounted(() => {
+  const needExpiredNotice = localStorage.getItem(AUTH_EXPIRED_NOTICE_KEY) === '1';
+  if (needExpiredNotice) {
+    localStorage.removeItem(AUTH_EXPIRED_NOTICE_KEY);
+    warning('登录已过期，请重新登录');
+  }
+
   syncDarkMode();
   observer = new MutationObserver(syncDarkMode);
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });

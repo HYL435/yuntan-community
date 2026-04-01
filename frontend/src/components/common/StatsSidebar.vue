@@ -48,7 +48,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { getAdminStats, getArticleCount } from '@/api/stats'
+import { getAdminStats, getArticleCount, getTodayHot } from '@/api/stats'
 import { getCategories } from '@/api/category'
 
 const articleCount = ref<number | null>(null)
@@ -80,6 +80,12 @@ async function fetchCategoryCount() {
 
 async function fetchTodayVisits() {
   try {
+    const hot = await getTodayHot()
+    if (typeof hot === 'number') {
+      todayVisits.value = hot
+      return
+    }
+
     const res = await getAdminStats()
     if (res) {
       if (Array.isArray(res.visits) && res.visits.length) {

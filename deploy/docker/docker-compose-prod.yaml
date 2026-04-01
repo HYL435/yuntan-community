@@ -12,6 +12,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ../data/mysql:/var/lib/mysql
+      - ../sql:/docker-entrypoint-initdb.d  # 初始化 SQL 脚本
     networks:
       - yuntan-network
     restart: unless-stopped

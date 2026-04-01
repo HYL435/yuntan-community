@@ -20,13 +20,30 @@ export const getArticleCount = async (): Promise<number | null> => {
   const res = await http.get('/front/articles/count')
   const body = res?.data ?? res
 
-  if (typeof body === 'number') return body
-  if (typeof body?.data === 'number') return body.data
+  const direct = Number(body)
+  if (Number.isFinite(direct)) return direct
+
+  const payload = Number(body?.data)
+  if (Number.isFinite(payload)) return payload
+
+  return null
+}
+
+export const getTodayHot = async (): Promise<number | null> => {
+  const res = await http.get('/front/stats/hot/today')
+  const body = res?.data ?? res
+
+  const direct = Number(body)
+  if (Number.isFinite(direct)) return direct
+
+  const payload = Number(body?.data)
+  if (Number.isFinite(payload)) return payload
 
   return null
 }
 
 export default {
   getAdminStats,
-  getArticleCount
+  getArticleCount,
+  getTodayHot
 }

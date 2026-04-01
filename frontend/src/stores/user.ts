@@ -2,6 +2,44 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { loginApi, getUserProfileApi, updateUserProfileApi, type LoginRequest, type UpdateUserRequest } from '@/api/auth';
 
+const TOKEN_CHECK_INTERVAL_MS = 60 * 1000;
+const AUTH_EXPIRED_NOTICE_KEY = 'auth_expired_notice';
+
+function stripBearer(t: string) {
+  return t.replace(/^Bearer\s+/i, '');
+}
+
+function parseJwtPayload(token: string): any | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const payload = parts[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const json = atob(padded);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function getTokenExpireAtMs(rawToken: string): number | null {
+  const payload = parseJwtPayload(stripBearer(rawToken));
+  if (!payload || payload.exp === undefined || payload.exp === null) return null;
+
+  const expNum = Number(payload.exp);
+  if (!Number.isFinite(expNum)) return null;
+
+  // JWT exp 标准是秒级时间戳，兼容毫秒级写法
+  return expNum < 1e12 ? expNum * 1000 : expNum;
+}
+
+function isTokenExpired(rawToken: string): boolean {
+  const expireAt = getTokenExpireAtMs(rawToken);
+  if (!expireAt) return false;
+  return Date.now() >= expireAt;
+}
+
 export interface User {
   id: number;
   username: string;
@@ -18,6 +56,43 @@ export const useUserStore = defineStore('user', () => {
   const user = ref<User | null>(null);
   const isLoggedIn = computed(() => !!user.value);
   const token = ref<string>('');
+  let tokenCheckTimer: ReturnType<typeof window.setInterval> | null = null;
+
+  const stopTokenExpiryCheck = () => {
+    if (tokenCheckTimer) {
+      window.clearInterval(tokenCheckTimer);
+      tokenCheckTimer = null;
+    }
+  };
+
+  const clearLocalAuthData = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_info');
+  };
+
+  const markAuthExpiredNotice = () => {
+    localStorage.setItem(AUTH_EXPIRED_NOTICE_KEY, '1');
+  };
+
+  const runTokenExpiryCheck = () => {
+    const savedToken = localStorage.getItem('auth_token') || token.value;
+    if (!savedToken) {
+      stopTokenExpiryCheck();
+      return;
+    }
+
+    if (isTokenExpired(savedToken)) {
+      console.warn('Token 已过期，自动清理本地登录信息');
+      markAuthExpiredNotice();
+      logout();
+    }
+  };
+
+  const startTokenExpiryCheck = () => {
+    stopTokenExpiryCheck();
+    runTokenExpiryCheck();
+    tokenCheckTimer = window.setInterval(runTokenExpiryCheck, TOKEN_CHECK_INTERVAL_MS);
+  };
 
   // 登录
   const login = async (credentials: LoginRequest) => {
@@ -47,6 +122,8 @@ export const useUserStore = defineStore('user', () => {
         // 同时保存用户信息到 localStorage（用于页面刷新恢复）
         localStorage.setItem('user_info', JSON.stringify(user.value));
 
+        startTokenExpiryCheck();
+
         return { success: true, message: '登录成功' };
       } else {
         return { success: false, message: message || '登录失败' };
@@ -61,8 +138,8 @@ export const useUserStore = defineStore('user', () => {
   const logout = () => {
     user.value = null;
     token.value = '';
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_info');
+    stopTokenExpiryCheck();
+    clearLocalAuthData();
   };
 
   // 从本地存储恢复登录状态
@@ -72,11 +149,20 @@ export const useUserStore = defineStore('user', () => {
       const savedUserInfo = localStorage.getItem('user_info');
 
       if (!savedToken) {
+        stopTokenExpiryCheck();
         return; // 没有保存的 token，直接返回
+      }
+
+      if (isTokenExpired(savedToken)) {
+        console.warn('检测到本地 token 已过期，自动退出登录');
+        markAuthExpiredNotice();
+        logout();
+        return;
       }
 
       // 设置 token
       token.value = savedToken;
+      startTokenExpiryCheck();
 
       // 优先使用本地保存的用户信息（快速恢复显示）
       if (savedUserInfo) {
@@ -160,6 +246,7 @@ export const useUserStore = defineStore('user', () => {
       console.error('Failed to get user profile:', error);
       // 如果是 401 未授权错误（令牌过期），清除登录状态
       if (error.response?.status === 401) {
+        markAuthExpiredNotice();
         logout();
       }
       return { success: false };

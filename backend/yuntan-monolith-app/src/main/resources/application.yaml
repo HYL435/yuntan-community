@@ -78,3 +78,5 @@ security:
       - /front/views/**
       # 评论相关路径
       - /front/comments/{articleId}/**
+      # 统计相关路径
+      - /front/stats/**

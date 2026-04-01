@@ -239,3 +239,6 @@ dump.rdb
 # Docker 环境变量（敏感）
 # =======================
 deploy/docker/.env
+
+# 放行版本化的 SQL 脚本目录
+!deploy/docker/sql/*.sql

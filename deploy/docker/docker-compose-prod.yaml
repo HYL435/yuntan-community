@@ -9,13 +9,16 @@ services:
       - .env
     ports:
       - "3306:3306"
+    command:
+      - --default-authentication-plugin=mysql_native_password
     volumes:
-      - mysql_data:/var/lib/mysql
       - ../data/mysql:/var/lib/mysql
-      - ../sql:/docker-entrypoint-initdb.d  # 初始化 SQL 脚本
+      - ../sql:/docker-entrypoint-initdb.d
     networks:
       - yuntan-network
     restart: unless-stopped
+    mem_limit: 768m
+    mem_reservation: 512m
 
   # ======================
   # Redis
@@ -25,12 +28,21 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
+    command:
+      - redis-server
+      - --appendonly
+      - yes
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
     volumes:
-      - redis_data:/data
       - ../data/redis:/data
     networks:
       - yuntan-network
     restart: unless-stopped
+    mem_limit: 384m
+    mem_reservation: 256m
 
   # ======================
   # Elasticsearch
@@ -38,14 +50,19 @@ services:
   es:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.19.12
     container_name: es
-    env_file:
-      - .env
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
     volumes:
-      - es_data:/usr/share/elasticsearch/data
       - ../data/es:/usr/share/elasticsearch/data
     networks:
       - yuntan-network
     restart: unless-stopped
+    mem_limit: 1g
+    mem_reservation: 768m
 
   # ======================
   # Python AI 服务
@@ -67,6 +84,8 @@ services:
     networks:
       - yuntan-network
     restart: unless-stopped
+    mem_limit: 512m
+    mem_reservation: 256m
 
   # ======================
   # Spring Boot 后端
@@ -81,11 +100,12 @@ services:
     ports:
       - "${SPRING_PORT}:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
       - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - REDIS_HOST=redis
       - ELASTICSEARCH_HOST=http://es:9200
+      - JAVA_TOOL_OPTIONS=-Xms256m -Xmx512m -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -Djava.security.egd=file:/dev/./urandom -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/data/logs
     depends_on:
       - mysql
       - redis
@@ -93,6 +113,8 @@ services:
     networks:
       - yuntan-network
     restart: unless-stopped
+    mem_limit: 768m
+    mem_reservation: 512m
 
   # ======================
   # Nginx
@@ -104,20 +126,13 @@ services:
     container_name: nginx
     ports:
       - "80:80"
+    depends_on:
+      - backend
     networks:
       - yuntan-network
     restart: unless-stopped
-
-# ======================
-# 数据卷
-# ======================
-volumes:
-  mysql_data:
-    driver: local
-  redis_data:
-    driver: local
-  es_data:
-    driver: local
+    mem_limit: 128m
+    mem_reservation: 64m
 
 # ======================
 # 网络配置

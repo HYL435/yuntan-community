@@ -28,6 +28,7 @@ const tags = ref<TagFrontVO[]>([]);
 const announcementTitle = ref('网站公告')
 const announcementContent = ref('欢迎来到云坛 — 我们已升级界面与评论管理功能，体验更顺畅。')
 const announcementLink = ref('')
+const announcementPublishTime = ref('')
 const showAnnouncement = ref(false)
 
 const titleScale = ref(1);
@@ -231,12 +232,17 @@ const loadNext = async (catId: number | string) => {
 const fetchHomeAnnouncement = async () => {
   const announcement = await getFrontAnnouncement()
   if (!announcement) {
-    showAnnouncement.value = false
+    announcementTitle.value = '欢迎来到云坛'
+    announcementContent.value = '欢迎访问云坛社区，愿你在这里发现灵感、分享经验、结识同路人。'
+    announcementLink.value = ''
+    announcementPublishTime.value = ''
+    showAnnouncement.value = true
     return
   }
   announcementTitle.value = announcement.title || '网站公告'
   announcementContent.value = announcement.content || ''
   announcementLink.value = announcement.link || ''
+  announcementPublishTime.value = announcement.publishTime || announcement.updateTime || ''
   showAnnouncement.value = !!announcement.content
 }
 
@@ -434,6 +440,7 @@ onUnmounted(() => {
                   :title="announcementTitle"
                   :content="announcementContent"
                   :link="announcementLink"
+                  :publish-time="announcementPublishTime"
                   :closable="false"
                   class="mb-10"
                 />

@@ -50,12 +50,18 @@
 
             <!-- 文字区域 -->
             <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 mb-1">
+              <div class="flex flex-wrap items-center gap-2 mb-1">
                 <h3 class="text-base font-bold text-gray-900 dark:text-white tracking-tight">
                   {{ title }}
                 </h3>
                 <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                   NEW
+                </span>
+                <span
+                  v-if="formattedPublishTime"
+                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:border-slate-700"
+                >
+                  发布时间 {{ formattedPublishTime }}
                 </span>
               </div>
               <div class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -91,17 +97,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   title: { type: String, default: '重要通知' },
   content: { type: String, default: '' },
   link: { type: String, default: '' },
+  publishTime: { type: String, default: '' },
   closable: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['close'])
 const isVisible = ref(true)
+
+const formattedPublishTime = computed(() => {
+  const value = (props.publishTime || '').trim()
+  if (!value) return ''
+  const normalized = value.replace('T', ' ')
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return normalized.length > 16 ? normalized.slice(0, 16) : normalized
+  }
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+})
 
 function handleClose() {
   isVisible.value = false

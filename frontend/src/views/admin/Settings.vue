@@ -5,7 +5,7 @@
     <el-collapse v-model="activePanel" accordion class="settings-collapse">
       <el-collapse-item name="announcement" title="公告管理">
         <el-alert
-          title="在这里发布、修改或关闭首页公告。关闭后前台首页将不显示公告。"
+          title="在这里新增、修改、发布或关闭首页公告。关闭后前台将回退为默认欢迎语。"
           type="info"
           :closable="false"
           class="mb-4"
@@ -32,15 +32,23 @@
           </el-form-item>
 
           <el-form-item label="当前状态">
-            <el-tag :type="announcementForm.enabled ? 'success' : 'info'">
-              {{ announcementForm.enabled ? '已发布' : '已关闭' }}
+            <el-tag :type="announcementForm.status === 1 ? 'success' : announcementForm.status === 0 ? 'warning' : 'info'">
+              {{ announcementStatusText }}
             </el-tag>
+          </el-form-item>
+
+          <el-form-item label="发布时间" v-if="announcementForm.publishTime">
+            <span class="text-gray-600 dark:text-gray-300">{{ formatDateTime(announcementForm.publishTime) }}</span>
+          </el-form-item>
+
+          <el-form-item label="更新时间" v-if="announcementForm.updateTime">
+            <span class="text-gray-600 dark:text-gray-300">{{ formatDateTime(announcementForm.updateTime) }}</span>
           </el-form-item>
 
           <el-form-item>
             <div class="flex flex-wrap gap-3">
               <el-button type="primary" :loading="announcementSaving" @click="publishAnnouncement">发布公告</el-button>
-              <el-button :loading="announcementSaving" @click="saveAnnouncement">保存修改</el-button>
+              <el-button :loading="announcementSaving" @click="saveAnnouncement">保存公告</el-button>
               <el-button type="danger" plain :loading="announcementSaving" @click="closeAnnouncement">关闭公告</el-button>
               <el-button :loading="announcementLoading" @click="loadAnnouncement">刷新</el-button>
             </div>
@@ -120,9 +128,14 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getAdminAnnouncement, saveAdminAnnouncement } from '@/api/announcement'
+import {
+  addAdminAnnouncement,
+  changeAdminAnnouncementStatus,
+  getAdminAnnouncement,
+  updateAdminAnnouncement,
+} from '@/api/announcement'
 
 type EventItem = {
   id: number
@@ -144,7 +157,15 @@ const announcementForm = reactive({
   title: '',
   content: '',
   link: '',
-  enabled: false,
+  status: 2,
+  publishTime: '',
+  updateTime: '',
+})
+
+const announcementStatusText = computed(() => {
+  if (announcementForm.status === 1) return '已发布'
+  if (announcementForm.status === 0) return '草稿'
+  return '已关闭'
 })
 
 const eventList = ref<EventItem[]>([])
@@ -169,13 +190,28 @@ const applyAnnouncement = (data: {
   title?: string
   content?: string
   link?: string
-  enabled?: boolean
+  status?: number
+  publishTime?: string
+  updateTime?: string
 }) => {
   announcementForm.id = data.id
   announcementForm.title = data.title || '网站公告'
   announcementForm.content = data.content || ''
   announcementForm.link = data.link || ''
-  announcementForm.enabled = !!data.enabled
+  announcementForm.status = typeof data.status === 'number' ? data.status : 2
+  announcementForm.publishTime = data.publishTime || ''
+  announcementForm.updateTime = data.updateTime || ''
+}
+
+const formatDateTime = (value?: string) => {
+  if (!value) return ''
+  const normalized = value.replace('T', ' ')
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return normalized.length > 19 ? normalized.slice(0, 19) : normalized
+  }
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 const loadAnnouncement = async () => {
@@ -190,27 +226,75 @@ const loadAnnouncement = async () => {
   }
 }
 
-const persistAnnouncement = async (enabled: boolean, successText: string) => {
+const validateAnnouncementForm = () => {
   if (!announcementForm.title.trim()) {
     ElMessage.warning('请先填写公告标题')
-    return
+    return false
   }
   if (!announcementForm.content.trim()) {
     ElMessage.warning('请先填写公告内容')
+    return false
+  }
+
+  return true
+}
+
+const createAnnouncement = async () => {
+  return addAdminAnnouncement({
+    title: announcementForm.title.trim(),
+    content: announcementForm.content.trim(),
+    link: announcementForm.link.trim(),
+  })
+}
+
+const updateCurrentAnnouncement = async () => {
+  if (!announcementForm.id) {
+    ElMessage.warning('请先点击保存公告，创建一条公告记录')
+    return null
+  }
+
+  return updateAdminAnnouncement({
+    id: announcementForm.id,
+    title: announcementForm.title.trim(),
+    content: announcementForm.content.trim(),
+    link: announcementForm.link.trim(),
+  })
+}
+
+const publishAnnouncement = async () => {
+  if (!validateAnnouncementForm()) {
     return
   }
 
   announcementSaving.value = true
   try {
-    const result = await saveAdminAnnouncement({
-      id: announcementForm.id,
-      title: announcementForm.title.trim(),
-      content: announcementForm.content.trim(),
-      link: announcementForm.link.trim(),
-      enabled,
-    })
-    applyAnnouncement(result)
-    ElMessage.success(successText)
+    const updated = await updateCurrentAnnouncement()
+    if (!updated || !updated.id) {
+      return
+    }
+    const published = await changeAdminAnnouncementStatus({ id: updated.id, status: 1 })
+    applyAnnouncement(published)
+    ElMessage.success('公告已发布')
+  } catch (error) {
+    ElMessage.error('发布公告失败')
+  } finally {
+    announcementSaving.value = false
+  }
+}
+
+const saveAnnouncement = async () => {
+  if (!validateAnnouncementForm()) {
+    return
+  }
+
+  announcementSaving.value = true
+  try {
+    const saved = await createAnnouncement()
+    if (!saved) {
+      return
+    }
+    applyAnnouncement(saved)
+    ElMessage.success('公告已保存')
   } catch (error) {
     ElMessage.error('保存公告失败')
   } finally {
@@ -218,16 +302,25 @@ const persistAnnouncement = async (enabled: boolean, successText: string) => {
   }
 }
 
-const publishAnnouncement = async () => {
-  await persistAnnouncement(true, '公告已发布')
-}
-
-const saveAnnouncement = async () => {
-  await persistAnnouncement(announcementForm.enabled, '公告已保存')
-}
-
 const closeAnnouncement = async () => {
-  await persistAnnouncement(false, '公告已关闭')
+  if (!validateAnnouncementForm()) {
+    return
+  }
+
+  announcementSaving.value = true
+  try {
+    const updated = await updateCurrentAnnouncement()
+    if (!updated || !updated.id) {
+      return
+    }
+    const closed = await changeAdminAnnouncementStatus({ id: updated.id, status: 2 })
+    applyAnnouncement(closed)
+    ElMessage.success('公告已关闭')
+  } catch (error) {
+    ElMessage.error('关闭公告失败')
+  } finally {
+    announcementSaving.value = false
+  }
 }
 
 const seedEvents = (): EventItem[] => ([

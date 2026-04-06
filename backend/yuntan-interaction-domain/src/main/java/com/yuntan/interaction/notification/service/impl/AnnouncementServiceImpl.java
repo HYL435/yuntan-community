@@ -3,6 +3,7 @@ package com.yuntan.interaction.notification.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yuntan.common.utils.BeanUtils;
+import com.yuntan.interaction.notification.constant.AnnouncementStatusConstant;
 import com.yuntan.interaction.notification.dto.AnnouncementDTO;
 import com.yuntan.interaction.notification.dto.AnnouncementStatusDTO;
 import com.yuntan.interaction.notification.dto.UpdateAnnouncementDTO;
@@ -56,7 +57,6 @@ public class AnnouncementServiceImpl
 
         // 查询最新公告：状态为1（已发布），按照创建时间降序，分页查询第一页，每页1条，保证获取最新发布的一条数据
         Page<Announcement> page = lambdaQuery()
-                .eq(Announcement::getStatus, 1)
                 .orderByDesc(Announcement::getCreateTime)
                 .page(new Page<>(1, 1));
 
@@ -89,7 +89,7 @@ public class AnnouncementServiceImpl
         Announcement announcement = BeanUtils.copyBean(announcementDTO, Announcement.class);
 
         // 添加一些默认值，比如状态
-        announcement.setStatus(0); // 默认状态为0（草稿）
+        announcement.setStatus(AnnouncementStatusConstant.DRAFT); // 默认状态为0（草稿）
 
         // 保存公告
         this.save(announcement);

@@ -15,7 +15,7 @@ services:
       - --collation-server=utf8mb4_unicode_ci
     volumes:
       - ../data/mysql:/var/lib/mysql
-      - ../sql:/docker-entrypoint-initdb.d:ro
+      - ./sql:/docker-entrypoint-initdb.d:ro
     networks:
       - yuntan-network
     restart: unless-stopped

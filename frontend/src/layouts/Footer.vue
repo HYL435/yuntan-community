@@ -18,7 +18,7 @@
               <li><a href="#" class="footer-link" @click.prevent="goToBookshelf">藏书阁</a></li>
               <li><a href="#" class="footer-link" @click.prevent="goToToolbox">工具箱</a></li>
               <li><a href="#" class="footer-link" @click.prevent="goMessageBoard">留言板</a></li>
-              <li><a href="#" class="footer-link" @click.prevent="goToFriendLinks">友链</a></li>
+              <li><a href="#" class="footer-link" @click.prevent="goToFriendLinks">话题</a></li>
               <li><a href="#" class="footer-link" @click.prevent="goToAboutSite">关于本站</a></li>
               <li><a href="#" class="footer-link" @click.prevent="goToAboutAuthor">关于博主</a></li>
             </ul>

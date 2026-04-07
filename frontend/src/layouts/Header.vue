@@ -81,7 +81,7 @@ const getFirstTag = async (): Promise<string | null> => {
 const navLinks = ref([
   { name: "文章", href: "#super_container", options: ["首页"] },
   { name: "关于", href: "#about", options: ["关于本站", "关于博主"] },
-  { name: "社交", href: "#contact", options: ["留言板", "友链"] },
+  { name: "社交", href: "#contact", options: ["留言板", "话题"] },
   { name: "更多", href: "#more", options: ["藏书阁", "工具箱"] },
 ]);
 
@@ -154,7 +154,11 @@ onUnmounted(() => {
             <DarkButton />
             <UserProfile />
           </div>
-          <button @click="toggleMenu" class="md:hidden text-white">菜单</button>
+          <button @click="toggleMenu" class="md:hidden text-white p-2 rounded-lg hover:bg-white/10 transition-colors" aria-label="打开菜单">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
@@ -198,7 +202,11 @@ onUnmounted(() => {
             <BackTopButton />
             <UserProfile />
           </div>
-          <button @click="toggleMenu" class="md:hidden text-black">菜单</button>
+          <button @click="toggleMenu" class="md:hidden text-gray-800 p-2 rounded-lg hover:bg-black/5 transition-colors" aria-label="打开菜单">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
@@ -208,14 +216,33 @@ onUnmounted(() => {
       class="fixed inset-0 bg-brand-black z-50 transition-transform duration-500 ease-[cubic-bezier(0.77,0,0.175,1)]"
       :class="isMenuOpen ? 'translate-y-0' : '-translate-y-full'"
     >
-      <button @click="toggleMenu" class="absolute top-6 right-8 text-white text-xl">X</button>
-      <div class="w-full h-full flex flex-col items-center justify-center pt-20">
-        <ul class="flex flex-col items-center gap-8 mb-10">
-          <li v-for="link in navLinks" :key="link.name">
-            <a :href="link.href" @click="toggleMenu" class="text-3xl font-medium text-white hover:text-gray-300">{{ link.name }}</a>
+      <!-- 关闭按钮 -->
+      <button @click="toggleMenu" class="absolute top-5 right-6 text-white p-2 rounded-lg hover:bg-white/10 transition-colors" aria-label="关闭菜单">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
+      <!-- 可滚动内容区 -->
+      <div class="w-full h-full flex flex-col overflow-y-auto pt-16 pb-8 px-8">
+        <ul class="flex flex-col gap-2">
+          <li v-for="link in navLinks" :key="link.name" class="border-b border-white/10 py-4">
+            <div class="text-white/50 text-xs font-semibold uppercase tracking-widest mb-3">{{ link.name }}</div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="opt in link.options" :key="opt"
+                @click="handleOptionClick(link.name, opt); toggleMenu()"
+                class="px-4 py-2 text-base text-white rounded-lg hover:bg-white/15 transition-colors font-medium text-left"
+              >
+                {{ opt }}
+              </button>
+            </div>
           </li>
         </ul>
-        <UserProfile />
+        <div class="mt-auto pt-8 flex items-center justify-center gap-6">
+          <DarkButton />
+          <UserProfile />
+        </div>
       </div>
     </div>
   </div>

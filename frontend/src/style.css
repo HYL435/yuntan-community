@@ -50,6 +50,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
   background-color: var(--bg);
   transition: background-color 0.35s ease, color 0.35s ease;
 }

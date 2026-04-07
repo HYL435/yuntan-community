@@ -74,6 +74,7 @@
   color: var(--text-main);          /* 使用变量 */
   padding: 30px;
   width: 450px;
+  max-width: 100%;
   border-radius: 20px;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   box-shadow: 0 20px 60px var(--shadow);

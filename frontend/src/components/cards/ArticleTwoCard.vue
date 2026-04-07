@@ -1,6 +1,6 @@
 <template>
   <article 
-    class="group relative w-full h-56 md:h-72 cursor-pointer rounded-2xl transition-all duration-300 select-none shadow-sm hover:shadow-xl dark:shadow-none"
+    class="group relative w-full md:h-72 cursor-pointer rounded-2xl transition-all duration-300 select-none shadow-sm hover:shadow-xl dark:shadow-none"
     @click="handleClick"
   >
     <!-- ================= 背景层 ================= -->
@@ -17,11 +17,11 @@
 
     <!-- ================= 内容主体 ================= -->
     <div 
-      class="relative z-10 flex flex-col md:flex-row rounded-2xl overflow-hidden transition-all h-full"
+      class="relative z-10 flex flex-col md:flex-row rounded-2xl overflow-hidden transition-all md:h-full"
       :class="{ 'md:flex-row-reverse': imagePosition === 'left' }"
     >
       <!-- 1. 图片区域 -->
-      <div class="w-full md:w-5/12 relative h-full shrink-0 overflow-hidden">
+        <div class="w-full md:w-5/12 relative h-48 md:h-full shrink-0 overflow-hidden">
         <img 
           class="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110" 
           :src="coverUrl" 
@@ -54,7 +54,7 @@
       </div>
 
       <!-- 2. 文字区域 -->
-      <div class="flex-1 flex flex-col justify-between p-5 md:p-7 bg-transparent h-full min-w-0">
+      <div class="flex-1 flex flex-col justify-between p-5 md:p-7 bg-transparent md:h-full min-w-0">
         <div>
           <!-- 头部 Meta (日期 & 热度 & 收藏) -->
           <div class="flex items-center gap-3 mb-3 text-[11px] font-medium">

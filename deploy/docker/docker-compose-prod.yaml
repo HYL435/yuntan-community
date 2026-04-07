@@ -112,7 +112,7 @@ services:
     depends_on:
       - mysql
       - redis
-      - es
+#      - es
     networks:
       - yuntan-network
     restart: unless-stopped

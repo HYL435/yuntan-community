@@ -8,11 +8,6 @@ WORKDIR /app
 # 先复制 pom.xml，利用缓存下载依赖
 COPY pom.xml .
 
-# 如果你有 .mvn 和 mvnw，也一起复制
-# 没有的话，这两行可以删掉
-COPY .mvn .mvn
-COPY mvnw .
-
 # 先下载依赖
 RUN mvn dependency:go-offline -B
 
@@ -32,8 +27,6 @@ WORKDIR /app
 # 从 builder 阶段复制 jar
 COPY --from=builder /app/target/*.jar app.jar
 
-# 暴露端口
 EXPOSE 8080
 
-# 生产环境启动命令
 ENTRYPOINT ["java", "-Xms256m", "-Xmx512m", "-jar", "app.jar"]

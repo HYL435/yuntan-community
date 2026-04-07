@@ -129,8 +129,6 @@ services:
     container_name: nginx
     ports:
       - "80:80"
-    depends_on:
-      - backend
     networks:
       - yuntan-network
     restart: unless-stopped

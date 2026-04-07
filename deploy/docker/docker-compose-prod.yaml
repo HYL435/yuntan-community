@@ -92,8 +92,8 @@ services:
   # ======================
   backend:
     build:
-      context: ../../backend/yuntan-monolith-app
-      dockerfile: Dockerfile.prod
+      context: ../../
+      dockerfile: backend/yuntan-monolith-app/Dockerfile.prod
     container_name: backend
     volumes:
       - ../data:/data

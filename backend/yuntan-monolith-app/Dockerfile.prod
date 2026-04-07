@@ -1,13 +1,39 @@
-# backend/yuntan-monolith-app/Dockerfile.prod
+# ======================
+# 第一阶段：Maven 构建
+# ======================
 FROM maven:3.9.12-eclipse-temurin-21 AS builder
 
 WORKDIR /app
 
-# 复制已构建好的 jar（建议 Maven 打包到 target/）
-COPY target/yuntan-monolith-app.jar app.jar
+# 先复制 pom.xml，利用缓存下载依赖
+COPY pom.xml .
+
+# 如果你有 .mvn 和 mvnw，也一起复制
+# 没有的话，这两行可以删掉
+COPY .mvn .mvn
+COPY mvnw .
+
+# 先下载依赖
+RUN mvn dependency:go-offline -B
+
+# 再复制源码
+COPY src src
+
+# 打包 jar
+RUN mvn clean package -DskipTests
+
+# ======================
+# 第二阶段：运行环境
+# ======================
+FROM eclipse-temurin:21-jre
+
+WORKDIR /app
+
+# 从 builder 阶段复制 jar
+COPY --from=builder /app/target/*.jar app.jar
 
 # 暴露端口
 EXPOSE 8080
 
 # 生产环境启动命令
-ENTRYPOINT ["java", "-Xms512m", "-Xmx1024m", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Xms256m", "-Xmx512m", "-jar", "app.jar"]

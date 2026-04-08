@@ -2,6 +2,7 @@
   <div class="p-4 bg-white dark:bg-[#1e293b] rounded-lg shadow-sm transition-colors duration-300">
     <div class="mb-4 flex justify-between items-center">
       <h2 class="text-xl font-bold text-gray-800 dark:text-white">文章管理</h2>
+      <el-button type="primary" @click="goToCreateArticle">新增文章</el-button>
     </div>
 
     <el-form :inline="true" :model="queryParams" class="mb-4 flex flex-wrap gap-2" @submit.prevent>
@@ -268,6 +269,10 @@ const handleRowContextmenu = (row: ArticleAdmin, _column: any, event: MouseEvent
 }
 
 const router = useRouter()
+
+const goToCreateArticle = () => {
+  router.push('/admin/articles/edit').catch(() => {})
+}
 
 // 计算当前右键行是否已置顶
 const isContextRowTop = computed(() => {

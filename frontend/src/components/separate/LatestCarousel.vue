@@ -13,6 +13,7 @@ const props = defineProps<{ title?: string }>()
 let scrollRaf: number | null = null
 let velocity = 0
 let animating = false
+let wheelListenerAttached = false
 const friction = 0.92
 const minVelocity = 0.1
 const maxSpeed = 25
@@ -167,14 +168,6 @@ const fetchRecommendedArticles = async (pageNo: number = 1) => {
       ?? payload?.pageTotal
     totalPages.value = Number(pagesRaw) > 0 ? Number(pagesRaw) : totalPages.value
     
-    console.log('Final articles:', articles.value)
-    console.log('Articles count:', articles.value.length)
-    console.log('Total pages:', totalPages.value)
-    console.debug('[carousel] parsed result:', {
-      pageNo,
-      resultLen: result.length,
-      firstRecord: result[0],
-    })
   } catch (err) {
     console.error('Failed to fetch articles:', err)
     if (currentPage.value === 1) {
@@ -259,16 +252,18 @@ const handleWheel = (event: WheelEvent) => {
 }
 
 const attachWheelListener = () => {
-  if (!row.value) return
+  if (!row.value || wheelListenerAttached) return
   row.value.addEventListener('wheel', handleWheel, { passive: false })
   row.value.addEventListener('scroll', handleScroll)
+  wheelListenerAttached = true
 }
 
 const detachWheelListener = () => {
-  if (row.value) {
+  if (row.value && wheelListenerAttached) {
     row.value.removeEventListener('wheel', handleWheel)
     row.value.removeEventListener('scroll', handleScroll)
   }
+  wheelListenerAttached = false
 }
 
 // 检测是否滚动到底部
@@ -287,6 +282,7 @@ const handleScroll = () => {
 watch(articles, async (newArticles) => {
   if (newArticles.length > 0) {
     await nextTick()
+    detachWheelListener()
     attachWheelListener()
     // 延迟检测滚动状态，确保 DOM 已完全渲染
     setTimeout(() => {

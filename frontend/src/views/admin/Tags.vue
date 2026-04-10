@@ -78,7 +78,13 @@ const fetchList = async () => {
     const body = res.data || res
     const data = body.data || body
     const list = Array.isArray(data) ? data : (data.list || data.records || data)
-    tags.value = Array.isArray(list) ? list : []
+    tags.value = Array.isArray(list)
+      ? list.map((item: any) => ({
+          ...item,
+          createTime: item?.createTime ?? item?.createDate ?? item?.createdAt ?? item?.create_date ?? item?.gmtCreate,
+          updateTime: item?.updateTime ?? item?.updateDate ?? item?.updatedAt ?? item?.update_date ?? item?.gmtModified
+        }))
+      : []
   } catch (err) {
     console.error('获取标签失败', err)
     ElMessage.error('获取标签失败')
@@ -172,7 +178,25 @@ const onToggleTagStatus = async (row: any, newStatus?: any) => {
 const formatDate = (v: any) => {
   if (!v && v !== 0) return '-'
   try {
-    const d = new Date(String(v))
+    let d: Date
+    if (Array.isArray(v)) {
+      const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0, nano = 0] = v.map((n: any) => Number(n) || 0)
+      d = new Date(year, Math.max(month - 1, 0), day || 1, hour, minute, second, Math.floor(nano / 1_000_000))
+    } else if (typeof v === 'object') {
+      const year = Number(v?.year)
+      const month = Number(v?.monthValue ?? v?.month ?? 1)
+      const day = Number(v?.dayOfMonth ?? v?.day ?? 1)
+      const hour = Number(v?.hour ?? 0)
+      const minute = Number(v?.minute ?? 0)
+      const second = Number(v?.second ?? 0)
+      d = new Date(year, Math.max(month - 1, 0), day, hour, minute, second)
+    } else if (typeof v === 'number') {
+      d = new Date(v)
+    } else {
+      const raw = String(v).trim()
+      const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(raw) ? raw.replace(' ', 'T') : raw
+      d = new Date(normalized)
+    }
     if (Number.isNaN(d.getTime())) return '-'
     return d.toLocaleString()
   } catch (e) {

@@ -14,10 +14,18 @@
         </span>
       </div>
       <div class="flex gap-3">
+        <el-button v-if="!isEditMode" plain @click="handleImportMarkdown">导入 Markdown</el-button>
         <el-button plain @click="handleSaveDraft">{{ isEditMode ? '保存' : '存草稿' }}</el-button>
         <el-button type="primary" :loading="submitting" @click="handleSubmit">
           <el-icon class="mr-1"><Position /></el-icon> 发布
         </el-button>
+        <input
+          ref="markdownImportInputRef"
+          type="file"
+          accept=".md,.markdown,text/markdown,text/plain"
+          class="hidden"
+          @change="onMarkdownFileChange"
+        />
       </div>
     </header>
 
@@ -176,7 +184,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { resolveCategoryId, resolveTagArrays } from '@/utils/resolveIds'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -214,6 +222,10 @@ const observer = new MutationObserver(() => {
 })
 onMounted(() => {
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+})
+
+onUnmounted(() => {
+  observer.disconnect()
 })
 
 // 表单数据
@@ -410,6 +422,122 @@ const handleUploadImage = async (files: File[], callback?: (urls: string[]) => v
 const coverInputRef = ref<HTMLInputElement | null>(null)
 // 保留用户选择的封面文件，以便在提交时作为 multipart 的 imageFile 字段上传
 const coverFileRef = ref<File | null>(null)
+const markdownImportInputRef = ref<HTMLInputElement | null>(null)
+
+const unquote = (value: string) => value.replace(/^['"]|['"]$/g, '').trim()
+
+const parseInlineList = (value: string): string[] => {
+  const listBody = value.trim().replace(/^\[/, '').replace(/\]$/, '')
+  if (!listBody) return []
+  return listBody
+    .split(',')
+    .map((item) => unquote(item.trim()))
+    .filter(Boolean)
+}
+
+const parseMarkdownFrontmatter = (rawText: string) => {
+  const result: {
+    body: string
+    title?: string
+    summary?: string
+    category?: string
+    tags?: string[]
+    keywords?: string
+  } = {
+    body: rawText,
+  }
+
+  const match = rawText.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n?/)
+  if (!match) return result
+
+  const frontmatter = match[1]
+  result.body = rawText.slice(match[0].length)
+
+  const lines = frontmatter.split(/\r?\n/)
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i].trim()
+    if (!line || line.startsWith('#')) continue
+
+    const kvMatch = line.match(/^([A-Za-z_][\w-]*)\s*:\s*(.*)$/)
+    if (!kvMatch) continue
+
+    const key = kvMatch[1].toLowerCase()
+    const value = kvMatch[2].trim()
+
+    if (key === 'tags') {
+      if (value.startsWith('[') && value.endsWith(']')) {
+        result.tags = parseInlineList(value)
+        continue
+      }
+
+      if (value) {
+        result.tags = value.includes(',') ? parseInlineList(`[${value}]`) : [unquote(value)]
+        continue
+      }
+
+      const listValues: string[] = []
+      for (let j = i + 1; j < lines.length; j += 1) {
+        const listLine = lines[j].trim()
+        const itemMatch = listLine.match(/^[-*]\s+(.+)$/)
+        if (!itemMatch) break
+        listValues.push(unquote(itemMatch[1]))
+        i = j
+      }
+      result.tags = listValues.filter(Boolean)
+      continue
+    }
+
+    const cleanValue = unquote(value)
+    if (!cleanValue) continue
+
+    if (key === 'title') result.title = cleanValue
+    else if (key === 'summary' || key === 'description') result.summary = cleanValue
+    else if (key === 'category') result.category = cleanValue
+    else if (key === 'keywords') result.keywords = cleanValue
+  }
+
+  return result
+}
+
+const handleImportMarkdown = () => {
+  if (!markdownImportInputRef.value) return
+  markdownImportInputRef.value.value = ''
+  markdownImportInputRef.value.click()
+}
+
+const onMarkdownFileChange = async (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  try {
+    const rawText = await file.text()
+    if (!rawText.trim()) {
+      ElMessage.warning('Markdown 文件内容为空')
+      return
+    }
+
+    const parsed = parseMarkdownFrontmatter(rawText)
+    form.content = parsed.body.trim()
+
+    if (parsed.title) {
+      form.title = parsed.title
+    } else if (!form.title) {
+      const heading = form.content.match(/^#\s+(.+)$/m)
+      if (heading?.[1]) form.title = heading[1].trim()
+    }
+
+    if (parsed.summary) form.summary = parsed.summary
+    if (parsed.category) form.category = parsed.category
+    if (parsed.tags?.length) form.tags = parsed.tags
+    if (parsed.keywords) form.keywords = parsed.keywords
+
+    ElMessage.success(`已导入 ${file.name}`)
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('Markdown 导入失败')
+  }
+}
 
 const handleCoverUpload = (e?: Event) => {
   if (e) e.stopPropagation()

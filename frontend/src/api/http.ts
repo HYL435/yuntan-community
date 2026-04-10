@@ -1,5 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
+const IS_DEV = import.meta.env.DEV;
+
 // 创建 axios 实例
 // 所有请求统一走 /api 前缀，由网关或反向代理转发到后端
 const baseURL = '/api';
@@ -33,10 +35,12 @@ http.interceptors.request.use(
         }
       } catch (e) {}
 
-      console.debug('[http] 请求:', config.method, config.url, 'HasAuthorization=', !!token)
+      if (IS_DEV) {
+        console.debug('[http] 请求:', config.method, config.url, 'HasAuthorization=', !!token)
+      }
       // 如果是 /front/comments 相关请求，打印调用栈帮助定位谁发起了 GET /front/comments
       try {
-        if (typeof config.url === 'string' && config.url.includes('/front/comments')) {
+        if (IS_DEV && typeof config.url === 'string' && config.url.includes('/front/comments')) {
           console.groupCollapsed('[http] 调试 /front/comments 调用栈]')
           console.trace()
           console.groupEnd()
@@ -57,7 +61,9 @@ http.interceptors.response.use(
   (response: AxiosResponse) => {
     // 调试响应，方便排查后端返回与前端解析不一致的问题
     try {
-      console.debug('[http] 响应:', response.config?.url, response.status)
+      if (IS_DEV) {
+        console.debug('[http] 响应:', response.config?.url, response.status)
+      }
     } catch (err) {}
     return response;
   },

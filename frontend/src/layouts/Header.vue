@@ -11,7 +11,35 @@ import http from "@/api/http";
 const showTransparentHeader = ref(true);
 const showStickyHeader = ref(false);
 const isMenuOpen = ref(false);
+const showAboutAuthorEntry = ref(false);
 const router = useRouter();
+
+const checkIsAdmin = () => {
+  const raw = localStorage.getItem('auth_token') || ''
+  if (!raw) return false
+  try {
+    const token = raw.replace(/^Bearer\s+/i, '')
+    const parts = token.split('.')
+    if (parts.length < 2) return false
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+    const payload = JSON.parse(atob(padded))
+
+    let roleVal: any = null
+    if (payload.role !== undefined) roleVal = payload.role
+    else if (payload.roles !== undefined) roleVal = payload.roles
+    else if (payload.authority !== undefined) roleVal = payload.authority
+    else if (payload.authorities !== undefined) roleVal = payload.authorities
+
+    if (Array.isArray(roleVal) && roleVal.length > 0) roleVal = roleVal[0]
+    if (roleVal && typeof roleVal === 'object' && roleVal.role !== undefined) roleVal = roleVal.role
+
+    const roleNum = Number(roleVal)
+    return !Number.isNaN(roleNum) && (roleNum === 0 || roleNum === 1)
+  } catch {
+    return false
+  }
+}
 
 const handleScroll = () => {
   const scrollTop = window.scrollY || document.documentElement.scrollTop;
@@ -53,6 +81,7 @@ const handleOptionClick = async (linkName: string, option: string) => {
   }
   if (linkName === "社交") {
     if (option === "留言板") { router.push("/message-board"); return; }
+    if (option === "话题") { router.push('/topics'); return; }
     if (option === "友链") { router.push('/friend-links'); return; }
     return;
   }
@@ -103,6 +132,7 @@ const loadCategoriesIntoNav = async () => {
 };
 
 onMounted(() => {
+  showAboutAuthorEntry.value = checkIsAdmin();
   handleScroll();
   window.addEventListener("scroll", handleScroll);
   loadCategoriesIntoNav();
@@ -138,13 +168,14 @@ onUnmounted(() => {
                   <div v-if="link.options" class="nav-dropdown-wrapper">
                     <div class="nav-dropdown-card">
                       <div class="card-content">
-                         <OptionButton
-                           v-for="opt in link.options"
-                           :key="opt"
-                           @click="handleOptionClick(link.name, opt)"
-                         >
-                           {{ opt }}
-                         </OptionButton>
+                         <template v-for="opt in link.options" :key="opt">
+                           <OptionButton
+                             v-if="!(link.name === '关于' && opt === '关于博主' && !showAboutAuthorEntry)"
+                             @click="handleOptionClick(link.name, opt)"
+                           >
+                             {{ opt }}
+                           </OptionButton>
+                         </template>
                       </div>
                     </div>
                   </div>
@@ -229,13 +260,15 @@ onUnmounted(() => {
           <li v-for="link in navLinks" :key="link.name" class="border-b border-white/10 py-4">
             <div class="text-white/50 text-xs font-semibold uppercase tracking-widest mb-3">{{ link.name }}</div>
             <div class="flex flex-wrap gap-2">
-              <button
-                v-for="opt in link.options" :key="opt"
-                @click="handleOptionClick(link.name, opt); toggleMenu()"
-                class="px-4 py-2 text-base text-white rounded-lg hover:bg-white/15 transition-colors font-medium text-left"
-              >
-                {{ opt }}
-              </button>
+              <template v-for="opt in link.options" :key="opt">
+                <button
+                  v-if="!(link.name === '关于' && opt === '关于博主' && !showAboutAuthorEntry)"
+                  @click="handleOptionClick(link.name, opt); toggleMenu()"
+                  class="px-4 py-2 text-base text-white rounded-lg hover:bg-white/15 transition-colors font-medium text-left"
+                >
+                  {{ opt }}
+                </button>
+              </template>
             </div>
           </li>
         </ul>

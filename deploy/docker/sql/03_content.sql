@@ -132,3 +132,20 @@ create index idx_tag_id
     on article_tag (tag_id)
     comment '查询标签下的所有文章';
 
+
+CREATE TABLE IF NOT EXISTS `site_timeline` (
+                                               `id` BIGINT NOT NULL COMMENT '主键ID（雪花ID）',
+                                               `event_date` DATE NOT NULL COMMENT '时间节点日期（精确到日）',
+                                               `title` VARCHAR(128) NOT NULL COMMENT '节点标题',
+    `description` VARCHAR(1000) NOT NULL COMMENT '节点描述',
+    `sort_order` INT NOT NULL DEFAULT 0 COMMENT '排序值（越小越靠前）',
+    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态：0-禁用，1-启用',
+    `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '软删除：0-未删，1-已删',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_event_date` (`event_date`),
+    KEY `idx_sort_order` (`sort_order`),
+    KEY `idx_status_deleted` (`status`, `deleted`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='建站历程时间轴';
+

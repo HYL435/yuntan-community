@@ -80,3 +80,5 @@ security:
       - /front/comments/{articleId}/**
       # 统计相关路径
       - /front/stats/**
+      # 建站历程相关路径
+      - /front/timeline/**

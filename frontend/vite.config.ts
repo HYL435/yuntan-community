@@ -38,6 +38,21 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': resolve(__dirname, './src')
       }
+    },
+    build: {
+      cssCodeSplit: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return
+            if (id.includes('element-plus') || id.includes('@element-plus')) return 'vendor-element'
+            if (/node_modules\/(vue|@vue|pinia|vue-router)\//.test(id)) return 'vendor-vue'
+            if (id.includes('md-editor-v3') || id.includes('markdown-it') || id.includes('highlight.js')) return 'vendor-markdown'
+            if (id.includes('echarts')) return 'vendor-echarts'
+            return undefined
+          },
+        },
+      },
     }
   }
 })

@@ -10,8 +10,9 @@ import PortalButton from '@/components/common/PortalButton.vue'
 const route = useRoute()
 const router = useRouter()
 const hideChromeRoutes = new Set(['/login', '/register', '/message-board'])
+const hideHeaderRoutes = new Set(['/about/site'])
 const isAdminRoute = computed(() => route.path.startsWith('/admin'))
-const showChrome = computed(() => !isAdminRoute.value && !hideChromeRoutes.has(route.path))
+const showHeader = computed(() => !isAdminRoute.value && !hideChromeRoutes.has(route.path) && !hideHeaderRoutes.has(route.path))
 const showFooter = computed(() => !isAdminRoute.value && !hideChromeRoutes.has(route.path) && route.path !== '/profile')
 
 // 监听 http.ts 派发的网络错误事件
@@ -39,7 +40,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Header v-if="showChrome" />
+  <Header v-if="showHeader" />
 
   <Suspense>
     <router-view />

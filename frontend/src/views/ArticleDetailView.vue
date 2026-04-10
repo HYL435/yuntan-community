@@ -157,8 +157,36 @@ import { useRoute } from 'vue-router'
 import http from '@/api/http'
 import { likeArticleApi, collectArticleApi } from '@/api'
 import MarkdownIt from 'markdown-it'
-import hljs from 'highlight.js'
+import hljs from 'highlight.js/lib/core'
+import plaintext from 'highlight.js/lib/languages/plaintext'
+import javascript from 'highlight.js/lib/languages/javascript'
+import typescript from 'highlight.js/lib/languages/typescript'
+import java from 'highlight.js/lib/languages/java'
+import json from 'highlight.js/lib/languages/json'
+import xml from 'highlight.js/lib/languages/xml'
+import css from 'highlight.js/lib/languages/css'
+import bash from 'highlight.js/lib/languages/bash'
+import python from 'highlight.js/lib/languages/python'
+import markdown from 'highlight.js/lib/languages/markdown'
 import 'highlight.js/styles/atom-one-dark.css'
+
+hljs.registerLanguage('text', plaintext)
+hljs.registerLanguage('plaintext', plaintext)
+hljs.registerLanguage('javascript', javascript)
+hljs.registerLanguage('js', javascript)
+hljs.registerLanguage('typescript', typescript)
+hljs.registerLanguage('ts', typescript)
+hljs.registerLanguage('java', java)
+hljs.registerLanguage('json', json)
+hljs.registerLanguage('xml', xml)
+hljs.registerLanguage('html', xml)
+hljs.registerLanguage('css', css)
+hljs.registerLanguage('bash', bash)
+hljs.registerLanguage('shell', bash)
+hljs.registerLanguage('python', python)
+hljs.registerLanguage('py', python)
+hljs.registerLanguage('markdown', markdown)
+hljs.registerLanguage('md', markdown)
 
 // ------------------------------------------------
 // 1. Markdown 渲染配置
@@ -195,6 +223,7 @@ const loading = ref(true)
 const progress = ref(0)
 const sidebarVisible = ref(false)
 let progressTimer: number | null = null
+let sidebarScrollHandler: (() => void) | null = null
 
 const article = ref({
   id: '', title: '', content: '', category: '', tags: [] as string[],
@@ -322,16 +351,23 @@ onMounted(() => {
     const viewId = Number(articleId.value)
     if (!Number.isNaN(viewId)) reportView(viewId)
   }
-  window.addEventListener('scroll', () => {
+  sidebarScrollHandler = () => {
     const art = document.querySelector('article')
     if (art) {
       const rect = art.getBoundingClientRect()
       if (rect.top < 300 && rect.bottom > 400) sidebarVisible.value = true
       else sidebarVisible.value = false
     }
-  })
+  }
+  window.addEventListener('scroll', sidebarScrollHandler, { passive: true })
 })
-onUnmounted(() => { if (progressTimer) clearInterval(progressTimer) })
+onUnmounted(() => {
+  if (progressTimer) clearInterval(progressTimer)
+  if (sidebarScrollHandler) {
+    window.removeEventListener('scroll', sidebarScrollHandler)
+    sidebarScrollHandler = null
+  }
+})
 </script>
 
 <!-- 🔥 核心修复：移除 scoped，或者使用 :deep() 强制覆盖 -->

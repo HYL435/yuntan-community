@@ -34,6 +34,7 @@ const showAnnouncement = ref(false)
 const titleScale = ref(1);
 const titleOffset = ref(0);
 const isDarkMode = ref(false);
+const heroIntroVisible = ref(false)
 const router = useRouter();
 
 const categories = ref<CategoryFrontVO[]>([]);
@@ -41,11 +42,75 @@ const categoryArticles = ref<Record<string, any[]>>({});
 const rightSidebarRef = ref<HTMLElement | null>(null)
 const sidebarStickyTop = ref(96)
 let rightSidebarResizeObserver: ResizeObserver | null = null
+let themeMutationObserver: MutationObserver | null = null
+let scrollRafId: number | null = null
 // 分页设置：主页面每个分类每页显示数量
 const PAGE_SIZE = 3
 const categoryPage = reactive<Record<string, number>>({})
 const categoryTotal = reactive<Record<string, number>>({})
 const categoryHasMore = reactive<Record<string, boolean>>({})
+
+const poetryPool = [
+  '山重水复疑无路，柳暗花明又一村。',
+  '长风破浪会有时，直挂云帆济沧海。',
+  '海内存知己，天涯若比邻。',
+  '且将新火试新茶，诗酒趁年华。',
+  '纸上得来终觉浅，绝知此事要躬行。',
+  '苔花如米小，也学牡丹开。',
+  '星垂平野阔，月涌大江流。',
+  '会当凌绝顶，一览众山小。',
+  '欲买桂花同载酒，终不似，少年游。',
+  '云想衣裳花想容，春风拂槛露华浓。',
+]
+
+const displayedPoetry = ref('')
+let lastPoetry = ''
+let poetryTypeTimer: number | null = null
+let poetrySwitchTimer: number | null = null
+let heroIntroTimer: number | null = null
+
+const getRandomPoetry = (): string => {
+  if (poetryPool.length <= 1) return poetryPool[0] || ''
+  let next = poetryPool[Math.floor(Math.random() * poetryPool.length)]
+  while (next === lastPoetry) {
+    next = poetryPool[Math.floor(Math.random() * poetryPool.length)]
+  }
+  lastPoetry = next
+  return next
+}
+
+const clearPoetryTimers = () => {
+  if (poetryTypeTimer != null) {
+    window.clearTimeout(poetryTypeTimer)
+    poetryTypeTimer = null
+  }
+  if (poetrySwitchTimer != null) {
+    window.clearTimeout(poetrySwitchTimer)
+    poetrySwitchTimer = null
+  }
+}
+
+const typePoetry = (line: string, index = 0) => {
+  if (index === 0) displayedPoetry.value = ''
+  if (index < line.length) {
+    displayedPoetry.value += line[index]
+    poetryTypeTimer = window.setTimeout(() => typePoetry(line, index + 1), 200)
+    return
+  }
+  poetrySwitchTimer = window.setTimeout(() => {
+    playNextPoetry()
+  }, 1400)
+}
+
+const playNextPoetry = () => {
+  const nextLine = getRandomPoetry()
+  typePoetry(nextLine, 0)
+}
+
+const startPoetryLoop = () => {
+  clearPoetryTimers()
+  playNextPoetry()
+}
 
 const pickFirstArray = (obj: any): any[] => {
   if (!obj || typeof obj !== 'object') return []
@@ -197,13 +262,6 @@ const fetchCategoryPage = async (catId: number | string, pageNo = 1) => {
     const payload = normalizePayload(articlesRes?.data || articlesRes || {})
     const records = extractList(payload).map(normalizeArticle)
     const totalCount = extractTotal(payload, records.length)
-    console.debug('[home] category records:', {
-      categoryId: catKey,
-      pageNo,
-      totalCount,
-      recordsLen: records.length,
-      firstRecord: records[0],
-    })
     categoryTotal[catKey] = Number(totalCount) || 0
     categoryHasMore[catKey] = pageNo * PAGE_SIZE < (categoryTotal[catKey] || records.length)
     return records
@@ -300,7 +358,7 @@ onMounted(async () => {
   updateSidebarStickyTop()
 });
 
-const handleScroll = () => {
+const applyScrollState = () => {
   const scrollTop = window.scrollY || document.documentElement.scrollTop;
   const startScroll = 0;
   
@@ -313,6 +371,14 @@ const handleScroll = () => {
   }
 };
 
+const handleScroll = () => {
+  if (scrollRafId != null) return
+  scrollRafId = window.requestAnimationFrame(() => {
+    scrollRafId = null
+    applyScrollState()
+  })
+}
+
 const goToArticle = (id?: string | number) => {
   if (!id) return;
   router.push(`/article/${id}`);
@@ -324,7 +390,11 @@ const goToTag = (tag?: string) => {
 };
 
 onMounted(() => {
-  handleScroll();
+  startPoetryLoop()
+  heroIntroTimer = window.setTimeout(() => {
+    heroIntroVisible.value = true
+  }, 120)
+  applyScrollState();
   updateSidebarStickyTop()
   window.addEventListener('scroll', handleScroll);
   window.addEventListener('resize', updateSidebarStickyTop)
@@ -339,9 +409,9 @@ onMounted(() => {
     );
   };
   isDarkMode.value = checkDark();
-  const observer = new MutationObserver(() => isDarkMode.value = checkDark());
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-  observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  themeMutationObserver = new MutationObserver(() => isDarkMode.value = checkDark());
+  themeMutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  themeMutationObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
   if (typeof ResizeObserver !== 'undefined') {
     rightSidebarResizeObserver = new ResizeObserver(() => updateSidebarStickyTop())
@@ -352,11 +422,24 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  clearPoetryTimers()
+  if (heroIntroTimer != null) {
+    window.clearTimeout(heroIntroTimer)
+    heroIntroTimer = null
+  }
   window.removeEventListener('scroll', handleScroll);
   window.removeEventListener('resize', updateSidebarStickyTop)
+  if (scrollRafId != null) {
+    cancelAnimationFrame(scrollRafId)
+    scrollRafId = null
+  }
   if (rightSidebarResizeObserver) {
     rightSidebarResizeObserver.disconnect()
     rightSidebarResizeObserver = null
+  }
+  if (themeMutationObserver) {
+    themeMutationObserver.disconnect()
+    themeMutationObserver = null
   }
 });
 </script>
@@ -388,23 +471,39 @@ onUnmounted(() => {
           zIndex: 0 
         }"
       >
-        <!-- 【修复】标题文字颜色优化 -->
-        <h1 class="text-6xl md:text-7xl font-bold mb-6 tracking-tight">
-          <span class="bg-clip-text text-transparent bg-gradient-to-r 
-                       from-gray-800 to-gray-600 
-                       dark:from-white dark:to-slate-200">
-            欢迎来到云坛
-          </span>
-        </h1>
-        <!-- 【修复】副标题颜色提高对比度 -->
-        <p class="text-xl md:text-2xl text-gray-600 dark:text-slate-300 font-medium">
-          探索技术的无限可能
-        </p>
+        <div class="hero-intro" :class="{ 'is-visible': heroIntroVisible }">
+          <!-- 【修复】标题文字颜色优化 -->
+          <h1 class="text-6xl md:text-7xl font-bold mb-6 tracking-tight">
+            <span class="hero-title-ink">
+              欢迎来到云坛
+            </span>
+          </h1>
+          <!-- 【修复】副标题颜色提高对比度 -->
+          <p class="hero-subtitle text-xl md:text-2xl text-gray-600 dark:text-slate-300 font-medium">
+            探索技术的无限可能
+          </p>
+          <div class="hero-line-wrap" aria-hidden="true">
+            <span class="hero-line hero-line-left"></span>
+            <span class="hero-dot"></span>
+            <span class="hero-line hero-line-right"></span>
+          </div>
+          <div class="hero-meta mt-8" aria-live="polite">
+            <p class="hero-poetry-line">
+              <span class="hero-poetry-text">{{ displayedPoetry }}</span>
+              <span class="hero-poetry-caret" aria-hidden="true"></span>
+            </p>
+          </div>
+        </div>
       </main>
     </GridBackground>
 
     <!-- 2. 雨滴层 -->
     <Rain class="fixed inset-0 z-0 pointer-events-none opacity-60" />
+
+    <!-- 2.1 氛围光斑 -->
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+    <div class="ambient ambient-c"></div>
 
     <!-- 3. 主要内容区域 -->
     <div class="relative z-10 w-full pb-16">
@@ -428,6 +527,13 @@ onUnmounted(() => {
                backdrop-blur-md"
       >
         <div class="max-w-7xl mx-auto">
+          <div class="flow-ornaments mb-8" aria-hidden="true">
+            <span class="flow-line flow-line-a"></span>
+            <span class="flow-line flow-line-b"></span>
+            <span class="flow-dot flow-dot-a"></span>
+            <span class="flow-dot flow-dot-b"></span>
+          </div>
+
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10">
             
             <!-- 左边：文章列表 -->
@@ -550,6 +656,225 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.home-view {
+  position: relative;
+  overflow: hidden;
+}
+
+.ambient {
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(48px);
+  opacity: 0.42;
+}
+
+.ambient-a {
+  top: 15%;
+  left: -6%;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.32), transparent 70%);
+}
+
+.ambient-b {
+  top: 46%;
+  right: -4%;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.26), transparent 72%);
+}
+
+.ambient-c {
+  bottom: 6%;
+  left: 34%;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.2), transparent 72%);
+}
+
+.hero-meta {
+  display: flex;
+  justify-content: center;
+  min-height: 38px;
+}
+
+.hero-intro {
+  opacity: 0;
+  transform: translateY(84px);
+  transition: opacity 1.45s ease, transform 1.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-intro.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero-title-ink {
+  font-family: 'Ma Shan Zheng', 'STXingkai', 'FZShuTi', 'HanziPen SC', 'KaiTi', 'Kaiti SC', cursive;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  background: linear-gradient(120deg, #0f172a 0%, #0f766e 50%, #0369a1 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
+  animation: ink-breathe 3.2s ease-in-out infinite;
+}
+
+.dark .hero-title-ink {
+  background: linear-gradient(120deg, #fda4af 0%, #fb7185 42%, #fecdd3 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: 0 16px 34px rgba(244, 63, 94, 0.18);
+}
+
+.hero-subtitle {
+  letter-spacing: 0.08em;
+}
+
+.hero-line-wrap {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-line {
+  display: block;
+  width: 90px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(15, 118, 110, 0), rgba(15, 118, 110, 0.8), rgba(15, 118, 110, 0));
+  animation: line-pulse 2.2s ease-in-out infinite;
+}
+
+.hero-line-right {
+  animation-delay: 0.45s;
+}
+
+.hero-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #0f766e;
+  box-shadow: 0 0 0 0 rgba(15, 118, 110, 0.45);
+  animation: dot-jump 1.4s ease-in-out infinite;
+}
+
+.dark .hero-line {
+  background: linear-gradient(90deg, rgba(244, 63, 94, 0), rgba(244, 63, 94, 0.82), rgba(244, 63, 94, 0));
+}
+
+.dark .hero-dot {
+  background: #fb7185;
+  box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.5);
+}
+
+.hero-poetry-line {
+  margin: 0;
+  max-width: min(88vw, 760px);
+  text-align: center;
+  line-height: 1.55;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  color: rgba(15, 23, 42, 0.88);
+  min-height: 1.7em;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.hero-poetry-text {
+  font-family: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+}
+
+.hero-poetry-caret {
+  width: 1px;
+  height: 1em;
+  margin-left: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  animation: caret-blink 0.9s steps(1, end) infinite;
+}
+
+.dark .hero-poetry-line {
+  color: rgba(248, 250, 252, 0.9);
+}
+
+.dark .hero-poetry-caret {
+  background: rgba(248, 250, 252, 0.7);
+}
+
+@keyframes caret-blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.flow-ornaments {
+  position: relative;
+  height: 24px;
+}
+
+.flow-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(13, 148, 136, 0), rgba(13, 148, 136, 0.8), rgba(13, 148, 136, 0));
+}
+
+.flow-line-a {
+  top: 4px;
+  width: 86%;
+  animation: flow-run 3s ease-in-out infinite;
+}
+
+.flow-line-b {
+  top: 14px;
+  width: 62%;
+  opacity: 0.66;
+  animation: flow-run 3.4s ease-in-out infinite reverse;
+}
+
+.flow-dot {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #0d9488;
+}
+
+.flow-dot-a {
+  left: 18%;
+  top: 1px;
+  animation: dot-jump 1.2s ease-in-out infinite;
+}
+
+.flow-dot-b {
+  right: 18%;
+  top: 12px;
+  animation: dot-jump 1.2s ease-in-out infinite 0.35s;
+}
+
+.dark .flow-line {
+  background: linear-gradient(90deg, rgba(244, 63, 94, 0), rgba(244, 63, 94, 0.84), rgba(244, 63, 94, 0));
+}
+
+.dark .flow-dot {
+  background: #fb7185;
+}
+
 /* 保障深色模式下主面板背景与边框生效 */
 :global(html.dark) .home-panel,
 :global(.dark) .home-panel,
@@ -612,5 +937,35 @@ onUnmounted(() => {
 .animate-gradient {
   background-size: 200% auto;
   animation: gradient-move 4s linear infinite;
+}
+
+@keyframes ink-breathe {
+  0%,
+  100% { transform: translateY(0); filter: saturate(1); }
+  50% { transform: translateY(-2px); filter: saturate(1.15); }
+}
+
+@keyframes line-pulse {
+  0%,
+  100% { opacity: 0.55; transform: scaleX(0.85); }
+  50% { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes flow-run {
+  0%,
+  100% { transform: scaleX(0.92); opacity: 0.45; }
+  50% { transform: scaleX(1); opacity: 1; }
+}
+
+@keyframes dot-jump {
+  0%,
+  100% { transform: translateY(0) scale(1); box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.35); }
+  50% { transform: translateY(-5px) scale(1.08); box-shadow: 0 0 0 8px rgba(13, 148, 136, 0); }
+}
+
+@media (max-width: 1024px) {
+  .hero-line {
+    width: 64px;
+  }
 }
 </style>

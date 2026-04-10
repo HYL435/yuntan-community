@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@fontsource/ma-shan-zheng": "^5.2.9",
+    "@fontsource/noto-serif-sc": "^5.2.8",
     "axios": "^1.13.4",
     "echarts": "^6.0.0",
     "element-plus": "^2.13.2",

@@ -63,7 +63,9 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="createTime" label="创建时间" width="180" show-overflow-tooltip />
+      <el-table-column prop="createTime" label="创建时间" width="180" show-overflow-tooltip>
+        <template #default="{ row }">{{ formatDate(row.createTime) }}</template>
+      </el-table-column>
     </el-table>
 
     <div
@@ -151,7 +153,10 @@ const fetchList = async () => {
       isAsc: false,
     })
     const { records, total: totalCount } = normalizePageResponse(res.data || res)
-    tableData.value = records
+    tableData.value = records.map((item: any) => ({
+      ...item,
+      createTime: item?.createTime ?? item?.createDate ?? item?.createdAt ?? item?.create_date ?? item?.gmtCreate
+    }))
     total.value = totalCount
   } catch (error) {
     console.error('获取弹幕列表失败', error)
@@ -199,6 +204,35 @@ const formatTimePoint = (timePoint?: number | null) => {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+const formatDate = (v: any) => {
+  if (!v && v !== 0) return '-'
+  try {
+    let d: Date
+    if (Array.isArray(v)) {
+      const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0, nano = 0] = v.map((n: any) => Number(n) || 0)
+      d = new Date(year, Math.max(month - 1, 0), day || 1, hour, minute, second, Math.floor(nano / 1_000_000))
+    } else if (typeof v === 'object') {
+      const year = Number(v?.year)
+      const month = Number(v?.monthValue ?? v?.month ?? 1)
+      const day = Number(v?.dayOfMonth ?? v?.day ?? 1)
+      const hour = Number(v?.hour ?? 0)
+      const minute = Number(v?.minute ?? 0)
+      const second = Number(v?.second ?? 0)
+      d = new Date(year, Math.max(month - 1, 0), day, hour, minute, second)
+    } else if (typeof v === 'number') {
+      d = new Date(v)
+    } else {
+      const raw = String(v).trim()
+      const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(raw) ? raw.replace(' ', 'T') : raw
+      d = new Date(normalized)
+    }
+    if (Number.isNaN(d.getTime())) return '-'
+    return d.toLocaleString()
+  } catch (e) {
+    return '-'
+  }
 }
 
 const hideContextMenu = () => {

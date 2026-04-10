@@ -20,6 +20,28 @@ function parseJwtPayload(token: string): any | null {
   }
 }
 
+function getRoleFromPayload(payload: any): number {
+  if (!payload) return Number.NaN
+  let roleVal: any = null
+  if (payload.role !== undefined) roleVal = payload.role
+  else if (payload.roles !== undefined) roleVal = payload.roles
+  else if (payload.authority !== undefined) roleVal = payload.authority
+  else if (payload.authorities !== undefined) roleVal = payload.authorities
+
+  if (Array.isArray(roleVal) && roleVal.length > 0) roleVal = roleVal[0]
+  if (roleVal && typeof roleVal === 'object' && roleVal.role !== undefined) roleVal = roleVal.role
+  return Number(roleVal)
+}
+
+function isAdminFromLocalToken(): boolean {
+  const raw = localStorage.getItem('auth_token') || ''
+  if (!raw) return false
+  const token = stripBearer(raw)
+  const payload = parseJwtPayload(token)
+  const roleNum = getRoleFromPayload(payload)
+  return !Number.isNaN(roleNum) && (roleNum === 0 || roleNum === 1)
+}
+
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
@@ -97,6 +119,11 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/views/MessageBoardView.vue')
   },
   {
+    path: '/topics',
+    name: 'TopicsView',
+    component: () => import('@/views/TopicsView.vue')
+  },
+  {
     path: '/network-error',
     name: 'NetworkError',
     component: () => import('@/views/NetworkErrorView.vue')
@@ -119,6 +146,7 @@ const routes: Array<RouteRecordRaw> = [
       { path: 'comment', name: 'AdminComments', component: () => import('@/views/admin/Comments.vue') },
       { path: 'guestbook', name: 'AdminDanmaku', component: () => import('@/views/admin/Danmaku.vue') },
       { path: 'categories', name: 'AdminCategories', component: () => import('@/views/admin/Categories.vue') },
+      { path: 'site-timeline', name: 'AdminSiteTimeline', component: () => import('@/views/admin/SiteTimeline.vue') },
       { path: 'tag', name: 'AdminTag', component: () => import('@/views/admin/Tags.vue') },
       { path: 'articles/edit', name: 'AdminArticleEdit', component: () => import('@/views/admin/ArticleEditView.vue') },
       { path: 'users', name: 'AdminUsers', component: () => import('@/views/admin/Users.vue') },
@@ -142,32 +170,10 @@ const router = createRouter({
   }
 })
 
-// 全局路由守卫：限制 /admin 访问（必须登录且 token 中 role===0 或 1）
+// 全局路由守卫：限制后台与关于博主页面，仅管理员可访问
 router.beforeEach((to, _from, next) => {
-  if (to.path === '/admin') {
-    const raw = localStorage.getItem('auth_token') || ''
-    if (!raw) {
-      next({ path: '/' })
-      return
-    }
-    const token = stripBearer(raw)
-    const payload = parseJwtPayload(token)
-    if (!payload) {
-      next({ path: '/' })
-      return
-    }
-
-    let roleVal: any = null
-    if (payload.role !== undefined) roleVal = payload.role
-    else if (payload.roles !== undefined) roleVal = payload.roles
-    else if (payload.authority !== undefined) roleVal = payload.authority
-    else if (payload.authorities !== undefined) roleVal = payload.authorities
-
-    if (Array.isArray(roleVal) && roleVal.length > 0) roleVal = roleVal[0]
-    if (roleVal && typeof roleVal === 'object' && roleVal.role !== undefined) roleVal = roleVal.role
-
-    const roleNum = Number(roleVal)
-    if (!Number.isNaN(roleNum) && (roleNum === 0 || roleNum === 1)) {
+  if (to.path.startsWith('/admin') || to.path === '/about/author') {
+    if (isAdminFromLocalToken()) {
       next()
     } else {
       next({ path: '/' })

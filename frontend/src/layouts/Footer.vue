@@ -1,9 +1,9 @@
 <template>
-  <footer class="relative isolate z-40 border-t border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-[#050816] dark:text-slate-300">
+  <footer ref="footerRef" class="relative isolate z-40 border-t border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-[#050816] dark:text-slate-300">
     <div class="absolute inset-0 -z-10 bg-white dark:bg-[#050816]"></div>
     <div class="mx-auto max-w-7xl px-6 py-14 lg:px-8">
       <div class="grid gap-10 border-b border-slate-200 pb-10 dark:border-slate-800 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
-        <section class="max-w-lg">
+        <section class="max-w-lg reveal-on-scroll reveal-from-left" :class="{ 'is-visible': textVisible }">
           <p class="text-xs font-medium uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">Yuntan Community</p>
           <h2 class="mt-3 text-2xl font-semibold text-slate-950 dark:text-white">雲 壇</h2>
           <p class="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-400">
@@ -11,16 +11,16 @@
           </p>
         </section>
 
-        <section class="grid gap-8 sm:grid-cols-2 sm:items-start">
+        <section class="grid gap-8 sm:grid-cols-2 sm:items-start reveal-on-scroll reveal-from-right" :class="{ 'is-visible': textVisible }">
           <div>
             <h3 class="text-sm font-semibold text-slate-950 dark:text-white">导航</h3>
             <ul class="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-400">
               <li><a href="#" class="footer-link" @click.prevent="goToBookshelf">藏书阁</a></li>
               <li><a href="#" class="footer-link" @click.prevent="goToToolbox">工具箱</a></li>
               <li><a href="#" class="footer-link" @click.prevent="goMessageBoard">留言板</a></li>
-              <li><a href="#" class="footer-link" @click.prevent="goToFriendLinks">话题</a></li>
+              <li><a href="#" class="footer-link" @click.prevent="goToTopics">话题</a></li>
               <li><a href="#" class="footer-link" @click.prevent="goToAboutSite">关于本站</a></li>
-              <li><a href="#" class="footer-link" @click.prevent="goToAboutAuthor">关于博主</a></li>
+              <li v-if="showAboutAuthorEntry"><a href="#" class="footer-link" @click.prevent="goToAboutAuthor">关于博主</a></li>
             </ul>
           </div>
 
@@ -39,7 +39,7 @@
         </section>
       </div>
 
-      <div class="flex flex-col gap-4 pt-6 text-sm text-slate-500 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-4 pt-6 text-sm text-slate-500 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between reveal-on-scroll reveal-from-left" :class="{ 'is-visible': textVisible }">
         <p>© 2026 云坛社区 All Rights Reserved</p>
         <div class="flex flex-wrap items-center gap-2">
           <span>分类 {{ categories.length }}</span>
@@ -67,9 +67,13 @@ type CategoryItem = {
 
 const rt = ref({ days: '0', hours: '00', minutes: '00', seconds: '00' })
 const categories = ref<CategoryItem[]>([])
+const footerRef = ref<HTMLElement | null>(null)
+const textVisible = ref(false)
+const showAboutAuthorEntry = ref(false)
 const router = useRouter()
 const featuredCategories = computed(() => categories.value.slice(0, 4))
 let timer: number | undefined
+let textObserver: IntersectionObserver | undefined
 
 const goToBookshelf = () => {
   router.push('/bookshelf')
@@ -79,8 +83,8 @@ const goToToolbox = () => {
   router.push('/toolbox')
 }
 
-const goToFriendLinks = () => {
-  router.push('/friend-links')
+const goToTopics = () => {
+  router.push('/topics')
 }
 
 const goToAboutSite = () => {
@@ -105,6 +109,33 @@ const goToCategories = (category?: CategoryItem) => {
         }
       : undefined,
   })
+}
+
+const checkIsAdmin = () => {
+  const raw = localStorage.getItem('auth_token') || ''
+  if (!raw) return false
+  try {
+    const token = raw.replace(/^Bearer\s+/i, '')
+    const parts = token.split('.')
+    if (parts.length < 2) return false
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+    const payload = JSON.parse(atob(padded))
+
+    let roleVal: any = null
+    if (payload.role !== undefined) roleVal = payload.role
+    else if (payload.roles !== undefined) roleVal = payload.roles
+    else if (payload.authority !== undefined) roleVal = payload.authority
+    else if (payload.authorities !== undefined) roleVal = payload.authorities
+
+    if (Array.isArray(roleVal) && roleVal.length > 0) roleVal = roleVal[0]
+    if (roleVal && typeof roleVal === 'object' && roleVal.role !== undefined) roleVal = roleVal.role
+
+    const roleNum = Number(roleVal)
+    return !Number.isNaN(roleNum) && (roleNum === 0 || roleNum === 1)
+  } catch {
+    return false
+  }
 }
 
 const loadCategories = async () => {
@@ -133,17 +164,64 @@ function updateRuntime() {
 }
 
 onMounted(() => {
+  showAboutAuthorEntry.value = checkIsAdmin()
   updateRuntime()
   timer = window.setInterval(updateRuntime, 1000)
   loadCategories()
+
+  textObserver = new IntersectionObserver(
+    (entries) => {
+      const [entry] = entries
+      textVisible.value = !!entry?.isIntersecting
+    },
+    {
+      threshold: 0.35,
+      rootMargin: '0px 0px -12% 0px',
+    },
+  )
+
+  if (footerRef.value) {
+    textObserver.observe(footerRef.value)
+  }
 })
 
 onUnmounted(() => {
   if (timer) window.clearInterval(timer)
+  if (textObserver && footerRef.value) {
+    textObserver.unobserve(footerRef.value)
+  }
+  textObserver?.disconnect()
 })
 </script>
 
 <style scoped>
+.reveal-on-scroll {
+  opacity: 0;
+  transition: opacity 0.9s ease, transform 0.9s ease;
+  will-change: opacity, transform;
+}
+
+.reveal-from-left {
+  transform: translateX(-28px);
+}
+
+.reveal-from-right {
+  transform: translateX(28px);
+}
+
+.reveal-on-scroll.is-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 .footer-link {
   display: inline-block;
   border: 0;

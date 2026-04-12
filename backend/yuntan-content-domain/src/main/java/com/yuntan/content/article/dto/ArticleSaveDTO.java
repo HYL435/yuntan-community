@@ -51,13 +51,13 @@ public class ArticleSaveDTO {
     private String content;
 
     /**
-     * MongoDB 文章正文id
+     * 文章正文id
      */
     @Schema(
-            description = "MongoDB 文章正文id",
+            description = "文章正文id",
             example = "5f9a1b9b0f9a1b9b0f9a1b9b"
     )
-    private String mongoId;
+    private Long articleContentId;
 
     /**
      * 文章封面图URL
@@ -119,5 +119,16 @@ public class ArticleSaveDTO {
             defaultValue = "0"
     )
     private Integer isTop;
+
+    /**
+     * 文章状态：0-草稿，1-已发布，2-回收站，3-私密（默认草稿）
+     */
+    @Schema(
+            description = "文章状态：0-草稿，1-已发布，2-私密",
+            example = "0",
+            allowableValues = {"0", "1", "2"},
+            defaultValue = "0"
+    )
+    private Integer status;
 
 }

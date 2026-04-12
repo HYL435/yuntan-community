@@ -79,19 +79,15 @@
           >
             <div v-if="!form.coverImg" class="text-gray-400">
               <el-icon class="text-2xl mb-2"><Plus /></el-icon>
-              <div class="text-xs">点击上传或粘贴 URL</div>
+              <div class="text-xs">点击上传封面文件</div>
             </div>
             <img v-else :src="form.coverImg" class="w-full h-full object-cover rounded" />
             <input ref="coverInputRef" type="file" accept="image/*" class="hidden" @change="onCoverFileChange" />
             <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded gap-2 transition-opacity">
               <el-button size="small" type="primary" @click.stop="handleCoverUpload">更换</el-button>
-              <el-button size="small" type="danger" circle icon="Delete" @click.stop="form.coverImg = ''" />
+              <el-button size="small" type="danger" circle icon="Delete" @click.stop="clearCoverSelection" />
             </div>
           </div>
-          <!-- 备用：URL 输入 -->
-          <el-input v-if="!form.coverImg" v-model="form.coverImg" placeholder="或输入图片地址" size="small" clearable>
-            <template #prefix><el-icon><Link /></el-icon></template>
-          </el-input>
         </div>
 
         <!-- 摘要 -->
@@ -138,7 +134,7 @@
                 v-for="tag in normalizedTags"
                 :key="tag.id ?? tag.label"
                 :label="tag.label"
-                :value="tag.id ?? tag.label"
+                :value="tag.label"
                 :data-id="tag.id ?? null"
               />
             </el-select>
@@ -188,7 +184,7 @@ import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { resolveCategoryId, resolveTagArrays } from '@/utils/resolveIds'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, Plus, Link, Position, Check } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, Position, Check } from '@element-plus/icons-vue'
 import http from '@/api/http'
 
 // --- md-editor-v3 相关 ---
@@ -226,6 +222,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   observer.disconnect()
+  if (coverPreviewObjectUrl) {
+    URL.revokeObjectURL(coverPreviewObjectUrl)
+    coverPreviewObjectUrl = null
+  }
 })
 
 // 表单数据
@@ -236,8 +236,8 @@ const form = reactive({
   summary: '',
   coverImg: '',
   keywords: '',
-  // 若文章正文存储在 MongoDB 中，后端可能返回 mongoId，需要在提交时回传以更新对应文档
-  mongoId: '' as string | undefined,
+  // 后端 DTO 使用 articleContentId 字段
+  articleContentId: '' as string | undefined,
   // category 和 tags 将存储 id（若可用），否则回退到名称字符串
   category: '' as string | number,
   tags: [] as Array<string | number>,
@@ -324,20 +324,15 @@ const handleTagsChange = (vals: Array<string | number>) => {
     form.tags = []
     return
   }
-  const out: Array<string | number> = []
-  vals.forEach((v) => {
-    const s = String(v)
-    // 先看是否为纯数字 id
-    if (/^\d+$/.test(s)) {
-      out.push(String(Number(s)))
-      return
-    }
-    // 否则尝试在 normalizedTags 中查找对应项的 id
-    const found = normalizedTags.value.find((t: any) => String(t.label) === s || String(t.id) === s)
-    if (found && found.id != null && /^\d+$/.test(String(found.id))) out.push(String(found.id))
-    else out.push(s)
-  })
-  form.tags = out
+  // UI 中统一保存标签名，避免选择框显示 id
+  const out = vals
+    .map((v) => {
+      const s = String(v).trim()
+      const found = normalizedTags.value.find((t: any) => String(t.label) === s || String(t.id) === s)
+      return found?.label ?? s
+    })
+    .filter(Boolean)
+  form.tags = Array.from(new Set(out))
 }
 
 // 加载文章并映射到表单（兼容后端返回的不同字段格式）
@@ -351,8 +346,8 @@ const loadArticle = async (id: string | number) => {
 
     // 始终以字符串保存 id，避免 JS 数字精度丢失
     form.id = String(data.id ?? data._id ?? id)
-    // 多个后端实现可能使用不同字段名存储 Mongo 文档 id，尝试兼容常见字段
-    form.mongoId = data.mongoId ?? data.contentMongoId ?? data.contentId ?? data.mongo_id ?? data.mongoIdStr ?? undefined
+    // 后端字段为 articleContentId，这里兼容旧字段名
+    form.articleContentId = data.articleContentId ?? data.mongoId ?? data.contentMongoId ?? data.contentId ?? data.mongo_id ?? data.mongoIdStr ?? undefined
     form.title = data.title ?? ''
     form.content = data.content ?? data.body ?? ''
     form.summary = data.summary ?? data.summaryText ?? ''
@@ -367,9 +362,17 @@ const loadArticle = async (id: string | number) => {
     // category 可能是对象 {id,name} 或字符串，优先使用 id（便于提交），回退到名称
     form.category = data.category?.id ?? data.category ?? ''
 
-    // tags 可能是对象数组或字符串，优先映射为 id 数组（若没有 id 则使用名称）
+    // tags 统一映射为标签名数组，避免在选择框中显示 id
     if (Array.isArray(data.tags)) {
-      form.tags = data.tags.map((t: any) => (t && (t.id ?? (t.tagName ?? t.name ?? t)))) .filter(Boolean)
+      form.tags = data.tags
+        .map((t: any) => {
+          if (!t) return ''
+          if (typeof t === 'object') return t.tagName ?? t.name ?? ''
+          const s = String(t)
+          const found = normalizedTags.value.find((tag: any) => String(tag.id) === s || String(tag.label) === s)
+          return found?.label ?? s
+        })
+        .filter(Boolean)
     } else if (typeof data.tags === 'string') {
       // 假如后端返回逗号分隔的标签名列表，保留为名称数组
       form.tags = data.tags.split(',').map((s: string) => s.trim()).filter(Boolean)
@@ -422,6 +425,7 @@ const handleUploadImage = async (files: File[], callback?: (urls: string[]) => v
 const coverInputRef = ref<HTMLInputElement | null>(null)
 // 保留用户选择的封面文件，以便在提交时作为 multipart 的 imageFile 字段上传
 const coverFileRef = ref<File | null>(null)
+let coverPreviewObjectUrl: string | null = null
 const markdownImportInputRef = ref<HTMLInputElement | null>(null)
 
 const unquote = (value: string) => value.replace(/^['"]|['"]$/g, '').trim()
@@ -556,21 +560,20 @@ const onCoverFileChange = async (e: Event) => {
   coverFileRef.value = file
   if (!file.type.startsWith('image/')) return ElMessage.error('请选择图片文件')
   if (file.size > 10 * 1024 * 1024) return ElMessage.error('图片不能超过10MB')
-  const formData = new FormData()
-  formData.append('file', file)
-  try {
-    const res = await http.post('/admin/upload', formData)
-    const data = res.data?.data || res.data
-    form.coverImg = typeof data === 'string' ? data : data.url
-  } catch (err) {
-    // 如后端上传接口不可用，回退为本地预览（不会持久化至后端）
-    try {
-      const fallbackUrl = URL.createObjectURL((formData as any).get('file'))
-      form.coverImg = fallbackUrl
-      ElMessage.warning('上传接口不可用，已使用本地预览（未上传到服务器）')
-    } catch (e) {
-      ElMessage.error('上传失败')
-    }
+  if (coverPreviewObjectUrl) {
+    URL.revokeObjectURL(coverPreviewObjectUrl)
+    coverPreviewObjectUrl = null
+  }
+  coverPreviewObjectUrl = URL.createObjectURL(file)
+  form.coverImg = coverPreviewObjectUrl
+}
+
+const clearCoverSelection = () => {
+  form.coverImg = ''
+  coverFileRef.value = null
+  if (coverPreviewObjectUrl) {
+    URL.revokeObjectURL(coverPreviewObjectUrl)
+    coverPreviewObjectUrl = null
   }
 }
 
@@ -621,12 +624,18 @@ const submitLogic = async (isDraft: boolean) => {
   try {
     const url = '/admin/articles'
 
-    // 优先尝试：若用户选择了封面文件，则以 multipart/form-data 一次性提交（包含 id 与 mongoId）
+    if (!form.id && !coverFileRef.value) {
+      ElMessage.warning('请先选择封面图片文件')
+      submitting.value = false
+      return
+    }
+
+    // 优先尝试：若用户选择了封面文件，则以 multipart/form-data 一次性提交（包含 id 与 articleContentId）
     if (coverFileRef.value) {
       const fd = new FormData()
       fd.append('imageFile', coverFileRef.value)
       if (form.id) fd.append('id', String(form.id))
-      if (form.mongoId) fd.append('mongoId', String(form.mongoId))
+      if (form.articleContentId) fd.append('articleContentId', String(form.articleContentId))
       fd.append('title', form.title)
       fd.append('summary', form.summary)
       fd.append('content', form.content)
@@ -647,8 +656,9 @@ const submitLogic = async (isDraft: boolean) => {
         const res = await http.post(url, fd)
         const rdata = res.data?.data || res.data
         if (rdata) {
-          if (typeof rdata === 'string') form.coverImg = rdata
-          else if (rdata.url) form.coverImg = rdata.url
+          if (typeof rdata === 'object' && rdata.articleContentId) {
+            form.articleContentId = String(rdata.articleContentId)
+          }
           if (!form.id && rdata.id) form.id = String(rdata.id)
         }
         if (isDraft) {
@@ -662,22 +672,11 @@ const submitLogic = async (isDraft: boolean) => {
         submitting.value = false
         return
       } catch (err) {
-        // multipart 被后端拒绝或失败，回退到上传封面再以 JSON 提交
-        console.warn('multipart submit failed, falling back to upload-first JSON flow', err)
-        try {
-          const upFd = new FormData()
-          upFd.append('file', coverFileRef.value)
-          const upRes = await http.post('/admin/upload', upFd)
-          const upData = upRes.data?.data || upRes.data
-          const coverUrl = typeof upData === 'string' ? upData : upData?.url
-          if (coverUrl) form.coverImg = coverUrl
-        } catch (e) {
-          ElMessage.warning('封面上传失败，继续提交（使用当前封面 URL/本地预览）')
-        }
+        throw err
       }
     }
 
-    // 没有封面文件，或 multipart 失败后走这里，以 JSON 提交（包含 id 与 mongoId）
+    // 没有封面文件时走 JSON 提交（不传 coverImg，避免后端 DTO 反序列化错误）
 
     // 计算 categoryId 与 tagIds/tagNames（使用 helper，返回字符串 id）
     const resolvedCategoryId = resolveCategoryId(form.category as any, normalizedCategories.value)
@@ -686,7 +685,7 @@ const submitLogic = async (isDraft: boolean) => {
     const payload: any = {
       // 始终以字符串形式传递 id，避免 JS Number 精度丢失导致后端收到不正确的 id
       id: form.id ? String(form.id) : undefined,
-      mongoId: form.mongoId || undefined,
+      articleContentId: form.articleContentId || undefined,
       title: form.title,
       summary: form.summary,
       content: form.content,
@@ -698,7 +697,6 @@ const submitLogic = async (isDraft: boolean) => {
       isTop: form.isTop,
       status: form.status,
     }
-    if (form.coverImg && form.coverImg.startsWith('http')) payload.coverImg = form.coverImg
 
     const res = await http.post(url, payload)
 

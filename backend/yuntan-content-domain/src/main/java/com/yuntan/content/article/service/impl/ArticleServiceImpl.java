@@ -525,11 +525,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             } else {
                 article.setCoverImg(DefaultImageURLConstant.DEFAULT_BLOG_COVER_URL);
             }
+            // 保存文章
+            this.save(article);
             //TODO 将正文内容存入文章正文表
             Long articleContentId = articleContentService.addArticleContent(article.getId(), articleSaveDTO.getContent());
-            // 保存文章
+            // 更新文章正文id
             article.setArticleContentId(articleContentId);
-            this.save(article);
+            this.updateById(article);
         } else {
             String key;
             try {

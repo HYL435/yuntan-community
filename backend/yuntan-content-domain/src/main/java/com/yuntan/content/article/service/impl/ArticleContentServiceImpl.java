@@ -30,10 +30,10 @@ public class ArticleContentServiceImpl extends ServiceImpl<ArticleContentMapper,
      * 添加文章内容
      */
     @Override
-    public Long addArticleContent(Long id, String content) {
+    public Long addArticleContent(Long ArticleId, String content) {
 
         ArticleContent articleContent = ArticleContent.builder()
-                .id(id)
+                .articleId(ArticleId)
                 .content(content)
                 .contentType(1)
                 .build();

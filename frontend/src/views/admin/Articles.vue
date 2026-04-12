@@ -66,8 +66,12 @@
       </el-table-column>
       <el-table-column prop="viewCount" label="浏览" width="90" />
       <el-table-column prop="likeCount" label="点赞" width="90" />
-      <el-table-column prop="publishTime" label="发布时间" width="180" />
-      <el-table-column prop="updateTime" label="更新时间" width="180" />
+      <el-table-column prop="publishTime" label="发布时间" width="180">
+        <template #default="{ row }">{{ formatDate(row.publishTime) }}</template>
+      </el-table-column>
+      <el-table-column prop="updateTime" label="更新时间" width="180">
+        <template #default="{ row }">{{ formatDate(row.updateTime) }}</template>
+      </el-table-column>
     </el-table>
 
     <!-- 右键操作迷你悬浮框 -->
@@ -211,6 +215,36 @@ const statusText = (s: number | undefined) => {
   if (s === 1) return '已发布'
   if (s === 2) return '私密'
   return '-'
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
+const formatDate = (v: any) => {
+  if (!v) return '-'
+  try {
+    let d: Date
+    if (Array.isArray(v)) {
+      const [year, month, day, hour = 0, minute = 0, second = 0, nano = 0] = v.map((x: any) => Number(x) || 0)
+      d = new Date(year, Math.max(month - 1, 0), day || 1, hour, minute, second, Math.floor(nano / 1_000_000))
+    } else if (typeof v === 'number') {
+      d = new Date(v)
+    } else if (typeof v === 'string') {
+      const s = v.trim()
+      if (!s) return '-'
+      if (/^\d{4},\d{1,2},\d{1,2},\d{1,2},\d{1,2},\d{1,2}(,\d+)?$/.test(s)) {
+        const [year, month, day, hour = 0, minute = 0, second = 0] = s.split(',').map((x) => Number(x) || 0)
+        d = new Date(year, Math.max(month - 1, 0), day || 1, hour, minute, second)
+      } else {
+        d = new Date(s.replace(' ', 'T'))
+      }
+    } else {
+      d = new Date(v)
+    }
+
+    if (Number.isNaN(d.getTime())) return String(v)
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
+  } catch {
+    return String(v)
+  }
 }
 
 onMounted(() => {

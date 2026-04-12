@@ -1,5 +1,6 @@
 package com.yuntan.content.article.controller.admin;
 
+import com.yuntan.common.domain.Result;
 import com.yuntan.content.article.dto.ArticleSaveDTO;
 import com.yuntan.content.article.dto.ArticleStatusDTO;
 import com.yuntan.content.article.query.ArticleManageQuery;
@@ -12,8 +13,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import com.yuntan.common.domain.Result;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -71,8 +72,8 @@ public class AdminArticleController {
     }
 
     @Operation(summary = "保存文章")
-    @PostMapping
-    public Result<Void> saveArticle(@RequestBody ArticleSaveDTO articleSaveDTO) {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<Void> saveArticle(@ModelAttribute ArticleSaveDTO articleSaveDTO) {
 
         log.info("保存文章，文章保存参数：{}", articleSaveDTO);
 

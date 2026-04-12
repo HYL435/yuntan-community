@@ -624,89 +624,38 @@ const submitLogic = async (isDraft: boolean) => {
   try {
     const url = '/admin/articles'
 
-    if (!form.id && !coverFileRef.value) {
-      ElMessage.warning('请先选择封面图片文件')
-      submitting.value = false
-      return
-    }
+    // 统一使用 FormData：有封面才附带 imageFile，没封面不附带该字段
+    const fd = new FormData()
+    if (coverFileRef.value) fd.append('imageFile', coverFileRef.value)
+    if (form.id) fd.append('id', String(form.id))
+    if (form.articleContentId) fd.append('articleContentId', String(form.articleContentId))
 
-    // 优先尝试：若用户选择了封面文件，则以 multipart/form-data 一次性提交（包含 id 与 articleContentId）
-    if (coverFileRef.value) {
-      const fd = new FormData()
-      fd.append('imageFile', coverFileRef.value)
-      if (form.id) fd.append('id', String(form.id))
-      if (form.articleContentId) fd.append('articleContentId', String(form.articleContentId))
-      fd.append('title', form.title)
-      fd.append('summary', form.summary)
-      fd.append('content', form.content)
-      if (form.keywords) fd.append('keywords', form.keywords)
+    fd.append('title', String(form.title || ''))
+    fd.append('summary', String(form.summary || ''))
+    fd.append('content', String(form.content || ''))
+    fd.append('keywords', String(form.keywords || ''))
 
-      // 计算 categoryId/tagIds/tagNames（使用 helper，返回字符串 id）
-      const resolvedCategoryId = resolveCategoryId(form.category as any, normalizedCategories.value)
-      if (resolvedCategoryId) fd.append('categoryId', resolvedCategoryId)
-      const resolvedTags = resolveTagArrays(form.tags as any, normalizedTags.value)
-      if (resolvedTags.tagIds.length) fd.append('tagIds', JSON.stringify(resolvedTags.tagIds))
-      if (resolvedTags.tagNames.length) fd.append('tagNames', JSON.stringify(resolvedTags.tagNames))
-
-      fd.append('isOriginal', String(form.isOriginal))
-      fd.append('isTop', String(form.isTop))
-      fd.append('status', String(form.status))
-
-      try {
-        const res = await http.post(url, fd)
-        const rdata = res.data?.data || res.data
-        if (rdata) {
-          if (typeof rdata === 'object' && rdata.articleContentId) {
-            form.articleContentId = String(rdata.articleContentId)
-          }
-          if (!form.id && rdata.id) form.id = String(rdata.id)
-        }
-        if (isDraft) {
-          const now = new Date()
-          lastSavedTime.value = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`
-          ElMessage.success(form.id ? '保存成功' : '草稿已保存')
-        } else {
-          ElMessage.success(form.id ? '更新成功' : '发布成功')
-          router.push('/admin/articles')
-        }
-        submitting.value = false
-        return
-      } catch (err) {
-        throw err
-      }
-    }
-
-    // 没有封面文件时走 JSON 提交（不传 coverImg，避免后端 DTO 反序列化错误）
-
-    // 计算 categoryId 与 tagIds/tagNames（使用 helper，返回字符串 id）
+    // 计算 categoryId 与 tagIds（使用 helper，返回字符串 id）
     const resolvedCategoryId = resolveCategoryId(form.category as any, normalizedCategories.value)
     const resolvedTags = resolveTagArrays(form.tags as any, normalizedTags.value)
+    fd.append('categoryId', String(resolvedCategoryId || ''))
+    resolvedTags.tagIds.forEach((id) => fd.append('tagIds', String(id)))
 
-    const payload: any = {
-      // 始终以字符串形式传递 id，避免 JS Number 精度丢失导致后端收到不正确的 id
-      id: form.id ? String(form.id) : undefined,
-      articleContentId: form.articleContentId || undefined,
-      title: form.title,
-      summary: form.summary,
-      content: form.content,
-      keywords: form.keywords || undefined,
-      categoryId: resolvedCategoryId,
-      tagIds: resolvedTags.tagIds.length ? resolvedTags.tagIds : undefined,
-      tagNames: resolvedTags.tagNames.length ? resolvedTags.tagNames : undefined,
-      isOriginal: form.isOriginal,
-      isTop: form.isTop,
-      status: form.status,
+    fd.append('isOriginal', String(form.isOriginal))
+    fd.append('isTop', String(form.isTop))
+    fd.append('status', String(form.status))
+
+    const res = await http.post(url, fd)
+    const rdata = res.data?.data || res.data
+    if (rdata && typeof rdata === 'object') {
+      if (rdata.articleContentId) form.articleContentId = String(rdata.articleContentId)
+      if (!form.id && rdata.id) form.id = String(rdata.id)
     }
-
-    const res = await http.post(url, payload)
 
     if (isDraft) {
       const now = new Date()
       lastSavedTime.value = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`
       ElMessage.success(form.id ? '保存成功' : '草稿已保存')
-      if (!form.id && res.data?.data?.id) {
-        form.id = String(res.data.data.id)
-      }
     } else {
       ElMessage.success(form.id ? '更新成功' : '发布成功')
       router.push('/admin/articles')

@@ -515,7 +515,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         // 判断文章是否存在，存在则更新，否则插入
         if (article.getId() == null) {
             // 判断图片文件是否为空，如果不为空，则上传图片，如果为空，则使用默认图片
-            if (articleSaveDTO.getImageFile() != null) {
+            if (articleSaveDTO.getImageFile() != null && !articleSaveDTO.getImageFile().isEmpty()) {
                 try {
                     String image = articleOssUtil.uploadFile(articleSaveDTO.getImageFile(), FilePathConstant.ARTICLE_COVER_PATH);
                     article.setCoverImg(image);
@@ -540,11 +540,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
                     throw new BusinessException(MessageConstant.ARTICLE_NOT_FOUND);
                 }
                 key = RedisConstant.CACHE_KEY_PREFIX + byId.getId();
-                if (byId.getCoverImg() != null && !byId.getCoverImg().equals(DefaultImageURLConstant.DEFAULT_BLOG_COVER_URL)) {
-                    // 先删除原来的图片
-                    articleOssUtil.deleteFile(byId.getCoverImg());
+                if (articleSaveDTO.getImageFile() != null && !articleSaveDTO.getImageFile().isEmpty()) {
+                    if (byId.getCoverImg() != null && !byId.getCoverImg().equals(DefaultImageURLConstant.DEFAULT_BLOG_COVER_URL)) {
+                        // 非默认封面才删除旧 OSS 文件，避免误删默认资源
+                        articleOssUtil.deleteFile(byId.getCoverImg());
+                    }
+                    // 只要有新文件就上传并替换封面
                     String image = articleOssUtil.uploadFile(articleSaveDTO.getImageFile(), FilePathConstant.ARTICLE_COVER_PATH);
-                    // 将新的图片上传到OSS中
                     article.setCoverImg(image);
                 }
             } catch (IOException e) {

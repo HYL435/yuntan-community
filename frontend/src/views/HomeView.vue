@@ -534,10 +534,10 @@ onUnmounted(() => {
             <span class="flow-dot flow-dot-b"></span>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10">
+          <div class="home-content-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10">
             
             <!-- 左边：文章列表 -->
-            <div class="md:col-span-1 lg:col-span-3 space-y-12">
+            <div class="order-2 md:col-span-2 lg:order-1 lg:col-span-3 space-y-12">
               
               <!-- 第一部分：最新发布 -->
               <section>
@@ -607,16 +607,18 @@ onUnmounted(() => {
             </div>
             
             <!-- 右边：侧边栏 -->
-            <div class="md:col-span-1 lg:col-span-1">
+            <div class="order-1 md:col-span-2 lg:order-2 lg:col-span-1">
               <div
                 ref="rightSidebarRef"
-                class="sticky space-y-6 transition-[top] duration-200"
+                class="home-sidebar lg:sticky lg:space-y-6 transition-[top] duration-200"
                 :style="{ top: `${sidebarStickyTop}px` }"
               >
-                <BloggerCard />
+                <div class="home-sidebar-blogger">
+                  <BloggerCard />
+                </div>
                 
                 <!-- 【修复】侧边栏标签云文字颜色 -->
-                <div class="p-5 rounded-2xl bg-gray-50 dark:bg-[#252525] 
+                <div class="home-sidebar-topics p-5 rounded-2xl bg-gray-50 dark:bg-[#252525] 
                            border border-gray-100 dark:border-slate-700/50">
                   <h3 class="font-bold mb-3 flex items-center gap-2
                              text-gray-800 dark:text-slate-200">
@@ -643,7 +645,9 @@ onUnmounted(() => {
                     </template>
                   </div>
                 </div>
-                <StatsSidebar />
+                <div class="home-sidebar-stats">
+                  <StatsSidebar />
+                </div>
               </div>
             </div>
 
@@ -964,8 +968,213 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1024px) {
+  .home-panel {
+    padding: 1.5rem 1rem 2rem;
+    border-radius: 2rem 2rem 0 0;
+  }
+
+  .home-content-grid {
+    gap: 1.25rem;
+  }
+
+  .home-sidebar {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .home-sidebar-blogger,
+  .home-sidebar-topics,
+  .home-sidebar-stats {
+    min-width: 0;
+  }
+
+  .home-sidebar-topics {
+    padding: 1rem;
+    border-radius: 1.5rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(241, 245, 249, 0.94));
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+  }
+
+  :global(.dark) .home-sidebar-topics {
+    background: linear-gradient(135deg, rgba(37, 37, 37, 0.96), rgba(30, 41, 59, 0.86));
+    box-shadow: 0 22px 42px rgba(0, 0, 0, 0.22);
+  }
+
+  .home-sidebar-topics h3 {
+    margin-bottom: 0.875rem;
+  }
+
+  .home-sidebar-topics > div:last-child {
+    gap: 0.5rem;
+  }
+
+  .home-sidebar-topics > div:last-child > span {
+    padding: 0.5rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+  }
+
   .hero-line {
     width: 64px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .home-panel {
+    padding: 1.75rem 1.25rem 2.25rem;
+    border-radius: 2.2rem 2.2rem 0 0;
+  }
+
+  .home-sidebar {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    align-items: start;
+    gap: 1.1rem;
+  }
+
+  .home-sidebar-blogger {
+    grid-column: 1 / -1;
+  }
+
+  .home-sidebar-blogger,
+  .home-sidebar-topics,
+  .home-sidebar-stats {
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.65rem;
+  }
+
+  .home-sidebar-topics,
+  .home-sidebar-stats {
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(255, 255, 255, 0.56);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.05);
+  }
+
+  .home-sidebar-topics::before,
+  .home-sidebar-stats::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #0f766e, #2563eb, #06b6d4);
+    opacity: 0.9;
+  }
+
+  :global(html.dark) .home-sidebar-topics,
+  :global(html.dark) .home-sidebar-stats,
+  :global(.dark) .home-sidebar-topics,
+  :global(.dark) .home-sidebar-stats,
+  :global(html.dark-mode) .home-sidebar-topics,
+  :global(html.dark-mode) .home-sidebar-stats,
+  :global(.dark-mode) .home-sidebar-topics,
+  :global(.dark-mode) .home-sidebar-stats {
+    border-color: rgba(71, 85, 105, 0.48);
+    background: rgba(30, 41, 59, 0.32);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.2);
+  }
+
+  :global(html.dark) .home-sidebar-topics::before,
+  :global(html.dark) .home-sidebar-stats::before,
+  :global(.dark) .home-sidebar-topics::before,
+  :global(.dark) .home-sidebar-stats::before,
+  :global(html.dark-mode) .home-sidebar-topics::before,
+  :global(html.dark-mode) .home-sidebar-stats::before,
+  :global(.dark-mode) .home-sidebar-topics::before,
+  :global(.dark-mode) .home-sidebar-stats::before {
+    background: linear-gradient(90deg, #fb7185, #f97316, #f59e0b);
+  }
+}
+
+@media (max-width: 767px) {
+  .home-panel {
+    padding: 1.1rem 0.8rem 1.7rem;
+    border-radius: 1.75rem 1.75rem 0 0;
+  }
+
+  .flow-ornaments {
+    margin-bottom: 1rem;
+    height: 18px;
+  }
+
+  .home-sidebar {
+    gap: 0.875rem;
+  }
+
+  .home-sidebar-blogger,
+  .home-sidebar-topics {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.4rem;
+    backdrop-filter: blur(18px);
+  }
+
+  .home-sidebar-topics,
+  .home-sidebar-stats {
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.09);
+  }
+
+  .home-sidebar-topics {
+    padding: 0.95rem 0.9rem 1rem;
+    background: rgba(255, 255, 255, 0.64);
+    border: 1px solid rgba(226, 232, 240, 0.82);
+  }
+
+  .home-sidebar-topics::after {
+    content: '';
+    position: absolute;
+    top: -24px;
+    right: -16px;
+    width: 96px;
+    height: 96px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent 68%);
+    pointer-events: none;
+  }
+
+  :global(html.dark) .home-sidebar-topics,
+  :global(html.dark) .home-sidebar-stats,
+  :global(.dark) .home-sidebar-topics,
+  :global(.dark) .home-sidebar-stats,
+  :global(html.dark-mode) .home-sidebar-topics,
+  :global(html.dark-mode) .home-sidebar-stats,
+  :global(.dark-mode) .home-sidebar-topics,
+  :global(.dark-mode) .home-sidebar-stats {
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.24);
+  }
+
+  :global(html.dark) .home-sidebar-topics,
+  :global(.dark) .home-sidebar-topics,
+  :global(html.dark-mode) .home-sidebar-topics,
+  :global(.dark-mode) .home-sidebar-topics {
+    background: rgba(30, 41, 59, 0.34);
+    border-color: rgba(148, 163, 184, 0.18);
+  }
+
+  .home-sidebar-topics h3 {
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+  }
+
+  .home-sidebar-topics > div:last-child {
+    gap: 0.45rem;
+  }
+
+  .home-sidebar-topics > div:last-child > span {
+    padding: 0.42rem 0.78rem;
+    border-radius: 0.95rem;
+    font-size: 0.72rem;
+    background: rgba(248, 250, 252, 0.78);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+  }
+
+  :global(html.dark) .home-sidebar-topics > div:last-child > span,
+  :global(.dark) .home-sidebar-topics > div:last-child > span,
+  :global(html.dark-mode) .home-sidebar-topics > div:last-child > span,
+  :global(.dark-mode) .home-sidebar-topics > div:last-child > span {
+    background: rgba(51, 65, 85, 0.48);
+    border-color: rgba(100, 116, 139, 0.42);
   }
 }
 </style>

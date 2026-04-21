@@ -1,4 +1,6 @@
 from fastapi import APIRouter
+
+from app.core.exceptions import AIServiceException
 # 导入请求/响应模型
 from app.schemas.ai import ChatRequest, ChatResponse, SummaryRequest, SummaryResponse
 from app.schemas.common import ApiResponse
@@ -20,10 +22,17 @@ async def health():
 
 @router.post("/chat", response_model=ApiResponse[ChatResponse])
 async def chat(req: ChatRequest):
-    # 聊天接口，接收 ChatRequest，调用服务层处理并包装为 ApiResponse
-    result = await AIService.chat(req)
-    return ApiResponse.success(data=result, message="聊天成功")
-
+    try:
+        result = await AIService.chat(req)
+        return ApiResponse.success(
+            data=result,
+            message="聊天成功"
+        )
+    except AIServiceException as e:
+        return ApiResponse.fail(
+            message=e.message,
+            code=500
+        )
 
 @router.post("/summary", response_model=ApiResponse[SummaryResponse])
 async def summary(req: SummaryRequest):

@@ -1,6 +1,22 @@
+# requirements.txt：项目依赖列表
+# 说明：列出运行本 AI 服务所需的第三方 Python 包。
+# 注：以 # 开头的行是注释，不会被 pip 安装解析。
+# 建议在生产环境中为每个包指定明确版本（例如 fastapi==0.95.0），以保证可重现性。
+
+# Web 框架，用于构建异步 HTTP API（路由、请求/响应模型）
 fastapi
+
+# ASGI 服务器，推荐用于运行 FastAPI 应用（[standard] 启用常用额外依赖）
 uvicorn[standard]
+
+# 数据校验与模型库，FastAPI 强烈依赖，用于请求/响应模型校验
 pydantic
+
+# 从 .env 文件加载环境变量，便于本地开发与配置管理
 python-dotenv
+
+# 异步 HTTP 客户端，用于调用外部服务（例如 LLM 提供者的 HTTP API）
 httpx
+
+# OpenAI 官方 SDK（仅当需要对接 OpenAI API 时使用）
 openai

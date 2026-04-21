@@ -6,5 +6,6 @@ from app.api.v1.ai import router as ai_router
 
 # 创建主路由实例，并设置公共前缀为 /api
 api_router = APIRouter(prefix="/api")
+
 # 将 ai 模块的路由包含（挂载）到主路由下
-api_router.include_router(ai_router)  # 现在 AI 路由会在 /api/v1/ai 下生效
+api_router.include_router(ai_router)  # 现在 AI 路由会被访问到 /api/v1/ai/health, /api/v1/ai/chat, /api/v1/ai/summary 等路径

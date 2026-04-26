@@ -8,7 +8,7 @@ AIService 提供与上层业务交互的 AI 能力封装，主要负责：
 注意：本服务不负责具体的鉴权/限流/持久化，调用者应在外层处理这些横切关注点。
 """
 
-from app.schemas.ai import ChatRequest, ChatResponse
+from app.schemas.chat import ChatStreamRequest, ChatResponse
 from app.factory.llm_factory import LLMFactory
 from app.core.config import settings
 
@@ -23,7 +23,7 @@ class AIService:
     """
 
     @staticmethod
-    async def chat(req: ChatRequest) -> ChatResponse:
+    async def chat(req: ChatStreamRequest) -> ChatResponse:
         """
         调用底层 LLM 客户端进行聊天并返回统一响应。
 

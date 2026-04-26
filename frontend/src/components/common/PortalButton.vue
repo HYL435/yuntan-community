@@ -2,7 +2,7 @@
   <button
     v-if="showPortal"
     @click="onClick"
-    class="fixed right-6 bottom-6 z-50 flex items-center justify-center w-14 h-14 rounded-full shadow-2xl border border-slate-200 dark:border-slate-700
+    class="portal-button fixed right-6 bottom-6 z-50 flex items-center justify-center w-14 h-14 rounded-full shadow-2xl border border-slate-200 dark:border-slate-700
            bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 hover:scale-105 transform-gpu transition-transform duration-150"
     aria-label="传送门"
   >

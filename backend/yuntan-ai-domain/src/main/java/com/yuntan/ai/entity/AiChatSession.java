@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -50,26 +51,39 @@ public class AiChatSession implements Serializable {
     )
     private String title;
 
-    /**
-     * 默认模型提供商
-     */
-    @Schema(
-            description = "默认模型提供商",
-            example = "deepseek",
-            maxLength = 50
-    )
-    private String provider;
 
     /**
-     * 状态：1-正常 0-关闭
+     * 状态：0-已关闭 1-正常 2-已归档
      */
     @Schema(
-            description = "状态：1-正常 0-关闭",
+            description = "状态：0-已关闭 1-正常 2-已归档",
             example = "1",
-            allowableValues = {"0", "1"},
+            allowableValues = {"0", "1", "2"},
             defaultValue = "1"
     )
     private Integer status;
+
+    /**
+     * 下一个消息序列号
+     */
+    @Schema(
+            description = "下一个消息序列号",
+            example = "1",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
+    private Integer nextSequenceNo;
+
+    /**
+     * 逻辑删除：0-未删除 1-已删除
+     */
+    @Schema(
+            description = "逻辑删除标记：0-未删除 1-已删除",
+            example = "0",
+            allowableValues = {"0", "1"},
+            defaultValue = "0"
+    )
+    @TableLogic
+    private Integer deleted;
 
     /**
      * 创建时间

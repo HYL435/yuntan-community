@@ -1,15 +1,4 @@
 import os
-from dotenv import load_dotenv
-
-# 加载环境变量
-load_dotenv()
-
-# 环境变量转换成布尔值
-def to_bool(value: str, default: bool = False) -> bool:
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
 
 # 全局配置类，集中管理应用的环境变量配置import os
 from dotenv import load_dotenv
@@ -63,35 +52,4 @@ class Settings:
 
 
 # 创建全局配置实例，供其他模块导入使用
-settings = Settings()
-
-class Settings:
-    app_name: str = os.getenv("APP_NAME", "Yuntan AI Service")
-    app_env: str = os.getenv("APP_ENV", "dev")
-    app_host: str = os.getenv("APP_HOST", "0.0.0.0")
-    app_port: int = int(os.getenv("APP_PORT", "8000"))
-
-    default_provider: str = os.getenv("DEFAULT_PROVIDER", "qwen")
-    mock_llm: bool = to_bool(os.getenv("MOCK_LLM", "true"), default=True)
-
-    qwen_api_key: str = os.getenv("QWEN_API_KEY", "")
-    qwen_base_url: str = os.getenv(
-        "QWEN_BASE_URL",
-        "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    )
-    qwen_model: str = os.getenv("QWEN_MODEL", "qwen-plus")
-
-    wenxin_api_key: str = os.getenv("WENXIN_API_KEY", "")
-    wenxin_base_url: str = os.getenv("WENXIN_BASE_URL", "")
-    wenxin_model: str = os.getenv("WENXIN_MODEL", "ernie-speed-128k")
-
-    glm_api_key: str = os.getenv("GLM_API_KEY", "")
-    glm_base_url: str = os.getenv("GLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
-    glm_model: str = os.getenv("GLM_MODEL", "glm-4-flash")
-
-    deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "")
-    deepseek_base_url: str = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-    deepseek_model: str = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
-
-
 settings = Settings()

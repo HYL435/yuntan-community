@@ -1,7 +1,7 @@
 # 导入 APIRouter 用于创建路由分组
 from fastapi import APIRouter
 # 从子模块导入 AI 路由并重命名为 ai_router
-from app.api.v1.ai import router as ai_router
+from app.api.v1.chat import router as ai_router
 
 
 # 创建主路由实例，并设置公共前缀为 /api

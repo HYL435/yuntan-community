@@ -1,13 +1,13 @@
 package com.yuntan.common.hanlder;
 
 
+import com.yuntan.common.domain.Result;
+import com.yuntan.common.exception.BusinessException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import com.yuntan.common.domain.Result;
-import com.yuntan.common.exception.BusinessException;
 
 /**
  * 全局异常处理器（MVC版）

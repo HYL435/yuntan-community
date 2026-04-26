@@ -6,6 +6,7 @@ import Footer from '@/layouts/Footer.vue'
 import LoadingPulse from '@/components/loaders/LoadingPulse.vue'
 import NotificationsContainer from '@/layouts/NotificationsContainer.vue'
 import PortalButton from '@/components/common/PortalButton.vue'
+import AiAssistantWidget from '@/components/common/AiAssistantWidget.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -55,6 +56,7 @@ onUnmounted(() => {
 
   <NotificationsContainer />
   <PortalButton />
+  <AiAssistantWidget />
 </template>
 
 <style scoped>

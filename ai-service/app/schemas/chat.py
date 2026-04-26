@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 # 聊天请求模型
-class ChatRequest(BaseModel):
+class ChatStreamRequest(BaseModel):
     """
     ChatRequest - 聊天接口的请求结构
 
@@ -16,9 +16,40 @@ class ChatRequest(BaseModel):
     # 用户 ID（可选）
     user_id: Optional[int] = Field(default=None, description="用户ID，可选，用于记录或鉴权")
     # 会话 ID（可选，用于多轮对话）
-    session_id: Optional[str] = Field(default=None, description="会话ID，可选，用于多轮上下文关联")
-    # 模型名称（可选，默认为通义千问）
+    session_id: Optional[int] = Field(default=None, description="会话ID，可选，用于多轮上下文关联")
+    # 模型提供商（可选，默认为通义千问）
     provider: Optional[str] = Field(default="qwen", description="模型提供商")
+    # 模型名称
+    model: Optional[str] = Field(default="qwen", description="模型名称")
+
+# 流式事件模型，用于在聊天过程中逐步返回生成的内容和相关信息
+class StreamEvent(BaseModel):
+    """
+    StreamEvent - 流式事件模型
+
+    字段说明：
+    - type: 事件类型，用于标识当前事件的类型，如 "chunk" 表示一个分块的回复内容
+    - content: 分块的回复内容
+    - provider: 模型提供者名称
+    - model: 模型名称
+    - prompt_tokens: 提示词的token数量
+    - completion_tokens: 完成词的token数量
+    - total_tokens: 总token数量
+    - finish_reason: 完成原因
+    - code: 错误码
+    - message: 错误信息
+    """
+    type: str
+    content: Optional[str] = None
+    provider: Optional[str] = Field(default="qwen", description="模型提供商")
+    model: Optional[str] = Field(default="qwen", description="模型名称")
+    prompt_tokens: Optional[int] = Field(default=None, description="提示词的token数量")
+    completion_tokens: Optional[int] = Field(default=None, description="完成词的token数量")
+    total_tokens: Optional[int] = Field(default=None, description="总token数量")
+    finish_reason: Optional[str] = Field(default=None, description="完成原因")
+    code: Optional[str] = Field(default=None, description="错误码")
+    message: Optional[str] = Field(default=None, description="错误信息")
+
 
 
 # 聊天响应模型

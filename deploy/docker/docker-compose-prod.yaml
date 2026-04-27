@@ -131,9 +131,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/certbot/www:/var/www/certbot
-      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ../nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../nginx/certbot/www:/var/www/certbot
+      - ../nginx/certbot/conf:/etc/letsencrypt
     networks:
       - yuntan-network
     restart: unless-stopped
@@ -147,8 +147,8 @@ services:
     image: certbot/certbot
     container_name: certbot
     volumes:
-      - ./nginx/certbot/www:/var/www/certbot
-      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ../nginx/certbot/www:/var/www/certbot
+      - ../nginx/certbot/conf:/etc/letsencrypt
 
 # ======================
 # 网络配置

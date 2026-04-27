@@ -125,7 +125,7 @@ services:
   nginx:
     build:
       context: ../../
-      dockerfile: frontend/Dockerfile
+      dockerfile: frontend/Dockerfile.prod
     container_name: nginx
     ports:
       - "80:80"

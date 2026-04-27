@@ -2,7 +2,7 @@ spring:
   application:
     name: yuntan-community
   profiles:
-    active: dev
+    active: prod
 
   servlet:
     multipart:

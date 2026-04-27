@@ -29,10 +29,10 @@ class MockChatProvider(BaseChatProvider):
         await asyncio.sleep(0.2)
 
         chunks = [
-            "你好",
+            "你好，\n",
             "我收到你的问题：",
             req.message,
-            "。",
+            "。\n",
             "这是 mock 模型的测试输出。"
         ]
         # 2. delta 事件：模拟模型处理过程，每次返回一个片段

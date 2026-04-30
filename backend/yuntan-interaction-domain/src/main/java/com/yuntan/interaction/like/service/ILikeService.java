@@ -9,4 +9,9 @@ public interface ILikeService extends IService<ArticleLike> {
      * 点赞文章或取消点赞
      */
     void like(Long articleId);
+
+    /**
+     * 判断文章是否被点赞
+     */
+    Boolean isLiked(Long articleId);
 }

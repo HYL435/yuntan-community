@@ -1,12 +1,43 @@
 <script setup lang="ts" name="NetworkErrorView">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
 const route = useRoute()
+const LAST_VISITED_ROUTE_KEY = 'last_visited_route'
 
 // 从 query 参数接收来源路由，用于重试
-const from = computed(() => (route.query.from as string) || '/')
+const from = computed(() => {
+  const queryFrom = route.query.from
+  if (typeof queryFrom === 'string' && queryFrom.startsWith('/')) {
+    return queryFrom
+  }
+  return localStorage.getItem(LAST_VISITED_ROUTE_KEY) || '/'
+})
+
+const checkServerRecovered = async () => {
+  const probes = [
+    '/api/front/announcements',
+    '/api/front/articles/page/categoryOrTags?pageNo=1&pageSize=1',
+    '/api/'
+  ]
+
+  for (const url of probes) {
+    try {
+      const resp = await fetch(url, {
+        method: 'GET',
+        cache: 'no-store',
+      })
+      if (resp.status < 500) {
+        return true
+      }
+    } catch {
+      // continue trying the next probe endpoint
+    }
+  }
+
+  return false
+}
 
 // 倒计时重试
 const countdown = ref(0)
@@ -30,14 +61,12 @@ async function doRetry() {
   countdown.value = 0
   if (timer) { clearInterval(timer); timer = null }
   try {
-    // 尝试 ping 后端根路径判断是否恢复
-    const resp = await fetch('/api/front/articles?page=1&size=1', {
-      signal: AbortSignal.timeout(5000),
-      cache: 'no-store'
-    })
-    if (resp.ok || resp.status < 500) {
+    const recovered = await checkServerRecovered()
+    if (recovered) {
       // 服务已恢复，跳回来源页
-      router.replace(from.value)
+      const target = from.value || '/'
+      localStorage.setItem(LAST_VISITED_ROUTE_KEY, target)
+      router.replace(target)
       return
     }
   } catch {
@@ -52,6 +81,9 @@ const pulse = ref(0)
 let pulseFn: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
+  if (from.value) {
+    localStorage.setItem(LAST_VISITED_ROUTE_KEY, from.value)
+  }
   startRetryCountdown(15)
   pulseFn = setInterval(() => { pulse.value = (pulse.value + 1) % 3 }, 700)
 })
@@ -60,8 +92,6 @@ onUnmounted(() => {
   if (timer) clearInterval(timer)
   if (pulseFn) clearInterval(pulseFn)
 })
-
-import { computed } from 'vue'
 </script>
 
 <template>

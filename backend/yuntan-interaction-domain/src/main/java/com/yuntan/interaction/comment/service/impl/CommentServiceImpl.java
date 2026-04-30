@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.yuntan.infra.redis.RedisConstant;
 import com.yuntan.interaction.comment.dto.admin.CommentStatusDTO;
 import com.yuntan.interaction.comment.dto.front.CommentDTO;
 import com.yuntan.interaction.comment.entity.Comment;
@@ -23,6 +24,7 @@ import com.yuntan.infra.mysql.PageDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.yuntan.common.constant.MessageConstant;
@@ -42,6 +44,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     private final CommentMapper commentMapper;
 
     private final CommentOssUtil commentOssUtil;
+    private final StringRedisTemplate redisTemplate;
 
     private final IUserService userService;
     private final IpLocationService ipLocationService;
@@ -76,6 +79,9 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
         // 存入数据库
         this.save(comment);
+
+        // 更新redis中缓存的评论数
+        updateCommentCount(comment.getArticleId(), 1);
     }
 
     /**
@@ -360,6 +366,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         }
     }
 
+    // 获取IP城市
     public String getCityByIp(String ip) {
         // 本地调试 IP 处理
         if ("127.0.0.1".equals(ip) || "localhost".equals(ip)) {
@@ -385,11 +392,25 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     }
 
 
+    // 获取文章信息
     public ArticleInfoDTO getArticleInfoById(Long id) {
         ArticleInfoDTO articleInfo = commentMapper.getArticleInfoById(id);
         if (articleInfo == null) {
             throw new RuntimeException(MessageConstant.ARTICLE_NOT_FOUND);
         }
         return articleInfo;
+    }
+
+    /**
+     * 更新评论数
+     */
+    private void updateCommentCount(Long articleId, int delta) {
+        String key = RedisConstant.ARTICLE_COUNTER_HASH_PREFIX + articleId;
+
+        // 原子递增Redis Hash中的likeCount
+        redisTemplate.opsForHash().increment(key, "CommentCount", delta);
+
+        // 将ID加入脏数据集合，用于后续同步到数据库
+        redisTemplate.opsForSet().add(RedisConstant.DIRTY_SET_KEY, String.valueOf(articleId));
     }
 }

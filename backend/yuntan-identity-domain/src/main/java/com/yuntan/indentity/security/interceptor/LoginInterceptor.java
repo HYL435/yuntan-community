@@ -39,6 +39,15 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         // 1. 白名单
         if (whitelistMatcher.isWhitelisted(path)) {
+            // 白名单路径也尝试解析用户信息，但不强制要求登录
+            Map<String, Object> userInfo = tokenAuthService.parseRequest(request);
+            if (userInfo != null) {
+                Object userIdObj = userInfo.get(KeyConstant.USER_ID);
+                if (userIdObj != null) {
+                    Long userId = Long.valueOf(userIdObj.toString());
+                    BaseContext.setUserId(userId);
+                }
+            }
             return true;
         }
 

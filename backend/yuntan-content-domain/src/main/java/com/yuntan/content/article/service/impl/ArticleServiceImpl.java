@@ -119,8 +119,38 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         // 处理个性化状态（点赞/收藏）
         fillInteractState(id, articleFrontVO);
 
+        // 计算真实点赞量和收藏量和浏览量还有评论量（数据库值 + Redis增量），不直接缓存，保证实时性
+        calculateCounters(articleFrontVO);
+
         return articleFrontVO;
     }
+
+    // 计算真实点赞量和收藏量和浏览量还有评论量（数据库值 + Redis增量），不直接缓存，保证实时性
+    private void calculateCounters(ArticleCountVO article) {
+
+        // 构建 Redis Hash Key
+        String key = RedisConstant.ARTICLE_COUNTER_HASH_PREFIX + article.getId();
+
+        // 从 Redis Hash 中获取增量（可能为 null）
+        String likeCountStr = (String) redisTemplate.opsForHash().get(key, "likeCount");
+        String collectCountStr = (String) redisTemplate.opsForHash().get(key, "collectCount");
+        String viewCountStr = (String) redisTemplate.opsForHash().get(key, "viewCount");
+        String commentCountStr = (String) redisTemplate.opsForHash().get(key, "commentCount");
+
+        if (likeCountStr != null) {
+            article.setLikeCount(article.getLikeCount() + Long.parseLong(likeCountStr));
+        }
+        if (collectCountStr != null) {
+            article.setCollectCount(article.getCollectCount() + Long.parseLong(collectCountStr));
+        }
+        if (viewCountStr != null) {
+            article.setViewCount(article.getViewCount() + Long.parseLong(viewCountStr));
+        }
+        if (commentCountStr != null) {
+            article.setCommentCount(article.getCommentCount() + Long.parseLong(commentCountStr));
+        }
+    }
+
 
     /**
      * 从数据库加载文章并写入缓存
@@ -136,10 +166,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         // 填充分类和标签
         setCategoryAndTags(articleFrontVO);
 
-        // 个性化字段不要污染公共缓存，先给默认值
-        articleFrontVO.setIsLike(false);
-        articleFrontVO.setIsCollect(false);
-
+        // 写入缓存
         writeArticleCache(key, articleFrontVO);
         return articleFrontVO;
     }
@@ -148,20 +175,25 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
      * 写文章缓存：过滤 null，避免把 null 写成字符串 "null"
      */
     private void writeArticleCache(String key, ArticleFrontVO articleFrontVO) {
+        // 将 ArticleFrontVO 转为 Map<String, Object>，并过滤掉 null 值
         Map<String, Object> dataMap = BeanUtils.dtoToMap(articleFrontVO);
         Map<String, String> stringMap = new HashMap<>();
 
+        // 过滤掉 null 值，避免把 null 写成字符串 "null"
         dataMap.forEach((field, value) -> {
             if (value != null) {
                 stringMap.put(field, String.valueOf(value));
             }
         });
 
+        // 将非 null 字段写入 Redis Hash
         if (!stringMap.isEmpty()) {
             redisTemplate.opsForHash().putAll(key, stringMap);
         }
 
+        // 设置过期时间，热点文章更长，普通文章更短，避免缓存雪崩
         Long ttl = calculateTTL(articleFrontVO);
+        // 缓存文章详情时，设置一个过期时间，热点文章更长，普通文章更短，避免缓存雪崩
         redisTemplate.expire(key, ttl, TimeUnit.SECONDS);
     }
 
@@ -272,6 +304,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
     // 根据ID列表批量获取文章详情
     private PageDTO<ArticleExhibitFrontVO> batchGetArticleDetails(List<Long> ids) {
+
         // 这里复用了 articleService.getArticleInfo(id)
         // 该方法内部已经实现了：先查 Redis Hash -> 没命中查 DB -> 回写 Redis 的闭环逻辑
         // 使用并行流 (parallelStream) 可以提高并发获取效率
@@ -282,6 +315,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
                 .collect(Collectors.toList());
         // 批量转换
         List<ArticleExhibitFrontVO> result = BeanUtils.copyList(list, ArticleExhibitFrontVO.class);
+
         // 封装 PageDTO
         PageDTO<ArticleExhibitFrontVO> pageDTO = new PageDTO<>();
         pageDTO.setList(result);
@@ -308,6 +342,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
         // 获取并设置分类和标签
         articleExhibitFrontVOPageDTO.getList().forEach(this::setCategoryAndTags);
+
+        // 计算计数器（点赞量、收藏量、浏览量、评论量）数据库值 + Redis增量，保证实时性
+        articleExhibitFrontVOPageDTO.getList().forEach(this::calculateCounters);
 
         return articleExhibitFrontVOPageDTO;
     }
@@ -389,6 +426,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
                 );
                 PageDTO<ArticleExhibitFrontVO> articleExhibitFrontVOPageDTO = PageDTO.of(resultPage, ArticleExhibitFrontVO.class);
                 articleExhibitFrontVOPageDTO.getList().forEach(this::setCategoryAndTags);
+                articleExhibitFrontVOPageDTO.getList().forEach(this::calculateCounters);
                 return articleExhibitFrontVOPageDTO;
             }
         }
@@ -425,6 +463,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
         // 获取并设置分类和标签
         articleAdminVOPageDTO.getList().forEach(this::setCategoryAndTags);
+
+        // 计算计数器（点赞量、收藏量、浏览量、评论量）数据库值 + Redis增量，保证实时性
+        articleAdminVOPageDTO.getList().forEach(this::calculateCounters);
 
         // 额外的过滤：如果前端传了 category 字段，则在内存中过滤一次（因为管理列表的查询条件比较复杂，直接在SQL里加分类条件会很麻烦）
         if (query.getCategory() != null) {

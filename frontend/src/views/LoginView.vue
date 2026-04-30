@@ -1,15 +1,24 @@
 <script setup lang="ts" name="LoginView">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import BackHomeButton from '@/components/common/BackHomeButton.vue';
 import { useNotification } from '@/composables/useNotification';
 import { validateLoginUser } from '@/utils/validators';
 
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
 const { success, error, warning } = useNotification();
 const AUTH_EXPIRED_NOTICE_KEY = 'auth_expired_notice';
+const REMEMBER_LOGIN_KEY = 'remember_login_credentials';
+const LAST_VISITED_ROUTE_KEY = 'last_visited_route';
+
+interface RememberLoginData {
+  account: string;
+  password: string;
+  rememberMe: boolean;
+}
 
 const username = ref('');
 const password = ref('');
@@ -17,6 +26,84 @@ const rememberMe = ref(false);
 const passwordVisible = ref(false);
 const errorMessage = ref('');
 const isLoading = ref(false);
+
+const getPostLoginTarget = () => {
+  const redirect = route.query.redirect;
+  if (typeof redirect === 'string' && redirect.startsWith('/') && redirect !== '/login') {
+    return redirect;
+  }
+
+  const remembered = localStorage.getItem(LAST_VISITED_ROUTE_KEY) || '/';
+  if (remembered.startsWith('/') && remembered !== '/login' && remembered !== '/register' && remembered !== '/network-error') {
+    return remembered;
+  }
+
+  return '/';
+};
+
+const toFriendlyLoginError = (rawMessage: string) => {
+  const normalized = rawMessage?.trim();
+  if (!normalized) {
+    return '登录失败，请稍后重试';
+  }
+
+  const statusMatch = normalized.match(/status code\s*(\d{3})/i);
+  if (statusMatch) {
+    const statusCode = Number(statusMatch[1]);
+    if (statusCode === 502 || statusCode === 503) {
+      return '服务器暂时不可用，请稍后再试';
+    }
+    if (statusCode === 500) {
+      return '服务器开小差了，请稍后再试';
+    }
+    if (statusCode === 401) {
+      return '账号或密码错误，请重新输入';
+    }
+    if (statusCode === 429) {
+      return '请求过于频繁，请稍后再试';
+    }
+    return '登录失败，请稍后重试';
+  }
+
+  const lower = normalized.toLowerCase();
+  if (lower.includes('network error')) {
+    return '网络连接异常，请检查网络后重试';
+  }
+
+  return normalized;
+};
+
+const loadRememberedLogin = () => {
+  const raw = localStorage.getItem(REMEMBER_LOGIN_KEY);
+  if (!raw) {
+    return;
+  }
+
+  try {
+    const saved: RememberLoginData = JSON.parse(raw);
+    if (saved.rememberMe && saved.account) {
+      username.value = saved.account;
+      password.value = saved.password ?? '';
+      rememberMe.value = true;
+    }
+  } catch {
+    localStorage.removeItem(REMEMBER_LOGIN_KEY);
+  }
+};
+
+const persistRememberedLogin = (account: string, plainPassword: string) => {
+  if (!rememberMe.value) {
+    localStorage.removeItem(REMEMBER_LOGIN_KEY);
+    return;
+  }
+
+  const payload: RememberLoginData = {
+    account,
+    password: plainPassword,
+    rememberMe: true,
+  };
+  localStorage.setItem(REMEMBER_LOGIN_KEY, JSON.stringify(payload));
+};
 
 const handleSubmit = async () => {
   const account = username.value.trim();
@@ -44,19 +131,24 @@ const handleSubmit = async () => {
     });
 
     if (loginResult.success) {
+      persistRememberedLogin(account, password.value);
       success('登录成功');
+      const targetPath = getPostLoginTarget();
+      localStorage.setItem(LAST_VISITED_ROUTE_KEY, targetPath);
       // 延迟跳转，让用户看到成功提示
       setTimeout(() => {
-        router.push('/');
+        router.push(targetPath);
       }, 500);
     } else {
-      errorMessage.value = loginResult.message;
-      error(loginResult.message);
+      const friendlyMessage = toFriendlyLoginError(loginResult.message);
+      errorMessage.value = friendlyMessage;
+      error(friendlyMessage);
     }
   } catch (errorObj) {
-    const errorMsg = errorObj instanceof Error ? errorObj.message : '登录失败，请重试';
-    errorMessage.value = errorMsg;
-    error(errorMsg);
+    const rawMessage = errorObj instanceof Error ? errorObj.message : '登录失败，请重试';
+    const friendlyMessage = toFriendlyLoginError(rawMessage);
+    errorMessage.value = friendlyMessage;
+    error(friendlyMessage);
   } finally {
     isLoading.value = false;
   }
@@ -73,6 +165,8 @@ const syncDarkMode = () => {
 
 let observer: MutationObserver | null = null;
 onMounted(() => {
+  loadRememberedLogin();
+
   const needExpiredNotice = localStorage.getItem(AUTH_EXPIRED_NOTICE_KEY) === '1';
   if (needExpiredNotice) {
     localStorage.removeItem(AUTH_EXPIRED_NOTICE_KEY);
@@ -145,7 +239,7 @@ onUnmounted(() => {
       </div>
       
       <button class="button-submit" type="submit" :disabled="isLoading">{{ isLoading ? '登录中...' : '登录' }}</button>
-      <p v-if="errorMessage" class="register-text">{{ errorMessage }}</p>
+      <p v-if="errorMessage" class="register-text auth-error">{{ errorMessage }}</p>
       <p class="register-text">还没有账号？<RouterLink class="register-link" to="/register">立即注册</RouterLink></p>
       </form>
     </div>

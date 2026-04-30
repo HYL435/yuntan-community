@@ -32,4 +32,14 @@ public class FrontLikeController {
         return Result.ok();
     }
 
+
+    @Operation(summary = "查询是否点赞")
+    @PostMapping("/isLiked/{articleId}")
+    public Result<Boolean> isLiked(@PathVariable Long articleId) {
+
+        log.info("查询是否点赞");
+
+        return Result.ok(likeService.isLiked(articleId));
+    }
+
 }

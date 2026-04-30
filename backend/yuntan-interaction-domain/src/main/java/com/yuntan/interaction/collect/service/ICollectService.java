@@ -9,4 +9,9 @@ public interface ICollectService extends IService<ArticleCollect> {
      * 收藏文章
      */
     void collect(Long articleId);
+
+    /**
+     * 是否收藏
+     */
+    Boolean isCollected(Long articleId);
 }

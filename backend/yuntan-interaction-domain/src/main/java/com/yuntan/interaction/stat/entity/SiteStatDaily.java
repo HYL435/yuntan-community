@@ -1,4 +1,4 @@
-package com.yuntan.content.stat.entity;
+package com.yuntan.interaction.stat.entity;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;

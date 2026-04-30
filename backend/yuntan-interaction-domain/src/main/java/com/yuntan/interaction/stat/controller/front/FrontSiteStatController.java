@@ -1,8 +1,8 @@
-package com.yuntan.content.stat.controller.front;
+package com.yuntan.interaction.stat.controller.front;
 
 
 import com.yuntan.common.domain.Result;
-import com.yuntan.content.stat.service.ISiteStatService;
+import com.yuntan.interaction.stat.service.ISiteStatService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

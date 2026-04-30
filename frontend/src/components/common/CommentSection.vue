@@ -205,7 +205,7 @@ interface CommentChildVO {
   image?: string
   likeCount?: number
   ip?: string
-  createTime: string
+  createTime: any
 }
 
 interface CommentVO {
@@ -216,7 +216,7 @@ interface CommentVO {
   content: string
   image?: string
   ip?: string
-  createTime: string
+  createTime: any
   children?: CommentChildVO[]
 }
 
@@ -242,11 +242,68 @@ const userStore = useUserStore()
 
 // --- 核心逻辑 ---
 
-const formatDate = (t?: string) => {
-  if (!t) return ''
-  // 简单格式化，建议引入 dayjs 处理 "几分钟前"
-  const d = new Date(t)
-  return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+const parseDateSafely = (value: any): Date | null => {
+  if (value === null || value === undefined || value === '') return null
+
+  try {
+    let date: Date
+
+    if (Array.isArray(value)) {
+      const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0, nano = 0] = value.map((n: any) => Number(n) || 0)
+      date = new Date(year, Math.max(month - 1, 0), day || 1, hour, minute, second, Math.floor(nano / 1_000_000))
+      return Number.isNaN(date.getTime()) ? null : date
+    }
+
+    if (typeof value === 'object') {
+      const year = Number(value?.year)
+      const month = Number(value?.monthValue ?? value?.month ?? 1)
+      const day = Number(value?.dayOfMonth ?? value?.day ?? 1)
+      const hour = Number(value?.hour ?? 0)
+      const minute = Number(value?.minute ?? 0)
+      const second = Number(value?.second ?? 0)
+      const nano = Number(value?.nano ?? 0)
+      date = new Date(year, Math.max(month - 1, 0), day || 1, hour, minute, second, Math.floor(nano / 1_000_000))
+      return Number.isNaN(date.getTime()) ? null : date
+    }
+
+    if (typeof value === 'number') {
+      date = new Date(value)
+      return Number.isNaN(date.getTime()) ? null : date
+    }
+
+    const raw = String(value).trim()
+    if (!raw) return null
+
+    // 兼容字符串数组: "[2026, 4, 28, 10, 30, 0]"
+    if (/^\s*\[\s*\d+\s*,/.test(raw)) {
+      const parts = raw.replace(/[\[\]\s]/g, '').split(',').map((n) => Number(n) || 0)
+      const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0, nano = 0] = parts
+      date = new Date(year, Math.max(month - 1, 0), day || 1, hour, minute, second, Math.floor(nano / 1_000_000))
+      return Number.isNaN(date.getTime()) ? null : date
+    }
+
+    // 兼容逗号时间串: "2026,4,28,10,30,0"
+    if (/^\d{4},\d{1,2},\d{1,2},\d{1,2},\d{1,2},\d{1,2}(,\d+)?$/.test(raw)) {
+      const parts = raw.split(',').map((n) => Number(n) || 0)
+      const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0, nano = 0] = parts
+      date = new Date(year, Math.max(month - 1, 0), day || 1, hour, minute, second, Math.floor(nano / 1_000_000))
+      return Number.isNaN(date.getTime()) ? null : date
+    }
+
+    const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?/.test(raw) ? raw.replace(' ', 'T') : raw
+    date = new Date(normalized)
+    return Number.isNaN(date.getTime()) ? null : date
+  } catch {
+    return null
+  }
+}
+
+const formatDate = (t?: any) => {
+  const d = parseDateSafely(t)
+  if (!d) return '-'
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
 const fetchComments = async () => {

@@ -1,7 +1,7 @@
-package com.yuntan.content.stat.filter;
+package com.yuntan.interaction.stat.filter;
 
 
-import com.yuntan.content.stat.service.ISiteStatService;
+import com.yuntan.interaction.stat.service.ISiteStatService;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;

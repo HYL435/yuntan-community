@@ -1,6 +1,6 @@
-package com.yuntan.content.stat.task;
+package com.yuntan.interaction.task;
 
-import com.yuntan.content.stat.service.ISiteStatService;
+import com.yuntan.interaction.stat.service.ISiteStatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;

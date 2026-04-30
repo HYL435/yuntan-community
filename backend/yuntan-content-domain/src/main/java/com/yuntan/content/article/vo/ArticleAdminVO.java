@@ -17,7 +17,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ArticleAdminVO implements CategorizableVO {
+public class ArticleAdminVO extends ArticleCountVO implements CategorizableVO{
 
     /**
      * 主键ID

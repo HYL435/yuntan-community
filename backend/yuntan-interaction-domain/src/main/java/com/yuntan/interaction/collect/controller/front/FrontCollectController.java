@@ -31,4 +31,13 @@ public class FrontCollectController {
         return Result.ok();
     }
 
+    @Operation(summary = "文章是否收藏")
+    @PostMapping("/isCollected/{articleId}")
+    public Result<Boolean> isCollected(@PathVariable Long articleId) {
+
+        log.info("是否收藏");
+
+        return Result.ok(collectService.isCollected(articleId));
+    }
+
 }

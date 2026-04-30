@@ -1,7 +1,7 @@
-package com.yuntan.content.stat.service;
+package com.yuntan.interaction.stat.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.yuntan.content.stat.entity.SiteStatDaily;
+import com.yuntan.interaction.stat.entity.SiteStatDaily;
 
 import java.time.LocalDate;
 

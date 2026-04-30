@@ -1,10 +1,10 @@
-package com.yuntan.content.stat.service.impl;
+package com.yuntan.interaction.stat.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.yuntan.content.stat.entity.SiteStatDaily;
-import com.yuntan.content.stat.mapper.SiteStatMapper;
-import com.yuntan.content.stat.service.ISiteStatService;
+import com.yuntan.interaction.stat.entity.SiteStatDaily;
+import com.yuntan.interaction.stat.mapper.SiteStatMapper;
+import com.yuntan.interaction.stat.service.ISiteStatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;

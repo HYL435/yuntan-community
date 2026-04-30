@@ -574,8 +574,10 @@ onUnmounted(() => {
                             :likes="Number(article.likeCount)"
                             :collectCount="Number(article.collectCount)"
                             :excerpt="article.summary"
+                            :tags="Array.isArray(article.tags) && article.tags.length
+                              ? article.tags.slice(0, 3)
+                              : [article.category || cat.categoryName]"
                             :primaryTag="article.category || cat.categoryName"
-                            :secondaryTag="article.tags && article.tags.length ? article.tags[0] : ''"
                             :imagePosition="'right'"
                             @click="goToArticle"
                           />

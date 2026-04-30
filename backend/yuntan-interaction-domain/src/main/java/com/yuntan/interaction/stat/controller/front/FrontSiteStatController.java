@@ -31,4 +31,7 @@ public class FrontSiteStatController {
 
         return Result.ok(siteStatService.getTodayUv());
     }
+
+
+
 }

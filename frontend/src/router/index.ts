@@ -153,7 +153,7 @@ const routes: Array<RouteRecordRaw> = [
       { path: 'articles/edit', name: 'AdminArticleEdit', component: () => import('@/views/admin/ArticleEditView.vue') },
       { path: 'users', name: 'AdminUsers', component: () => import('@/views/admin/Users.vue') },
       { path: 'settings', name: 'AdminSettings', component: () => import('@/views/admin/Settings.vue') },
-      { path: 'services', name: 'AdminServices', component: () => import('@/views/admin/Services.vue') }
+      { path: 'services', name: 'AdminServices', component: () => import('@/views/admin/SiteNotification.vue') }
     ]
   },
   // 必须放最后——匹配所有未定义路由，显示 404 页面

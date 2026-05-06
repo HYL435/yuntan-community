@@ -29,7 +29,7 @@
             <el-icon><Odometer /></el-icon>
             <template #title>仪表盘</template>
           </el-menu-item>
-          <el-menu-item index="/admin/stats">
+          <el-menu-item v-if="isStatsServiceEnabled" index="/admin/stats">
             <el-icon><DataAnalysis /></el-icon>
             <template #title>统计</template>
           </el-menu-item>
@@ -43,7 +43,7 @@
             <el-menu-item index="/admin/site-timeline">建站历程</el-menu-item>
             <el-menu-item index="/admin/tag">标签管理</el-menu-item>
           </el-sub-menu>
-          <el-sub-menu index="interaction">
+          <el-sub-menu v-if="isInteractionServiceEnabled" index="interaction">
             <template #title>
               <el-icon><ChatLineRound /></el-icon>
               <span>互动管理</span>
@@ -51,13 +51,17 @@
             <el-menu-item index="/admin/comment">评论管理</el-menu-item>
             <el-menu-item index="/admin/guestbook">留言管理</el-menu-item>
           </el-sub-menu>
-          <el-menu-item index="/admin/users">
+          <el-menu-item v-if="isUserManagementEnabled" index="/admin/users">
             <el-icon><User /></el-icon>
             <template #title>用户管理</template>
           </el-menu-item>
           <el-menu-item index="/admin/settings">
             <el-icon><Setting /></el-icon>
-            <template #title>系统设置</template>
+            <template #title>网站管理</template>
+          </el-menu-item>
+          <el-menu-item index="/admin/services">
+            <el-icon><Setting /></el-icon>
+            <template #title>服务开关</template>
           </el-menu-item>
         </el-menu>
       </el-scrollbar>
@@ -109,9 +113,10 @@
 </template>
 
 <script setup lang="ts" name="AdminLayout">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { loadAdminSiteSettings } from '@/utils/adminSiteSettings'
 import {
   Management, Expand, Fold, HomeFilled, Odometer, Document, ChatLineRound, User, Setting, Sunny, Moon, DataAnalysis
 } from '@element-plus/icons-vue'
@@ -121,8 +126,12 @@ const isDark = ref(false)
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const siteSettings = ref(loadAdminSiteSettings())
 
 const activeMenu = computed(() => route.path)
+const isUserManagementEnabled = computed(() => siteSettings.value.services.userManagementEnabled)
+const isStatsServiceEnabled = computed(() => siteSettings.value.services.statsServiceEnabled)
+const isInteractionServiceEnabled = computed(() => siteSettings.value.services.interactionServiceEnabled)
 const breadcrumbName = computed(() => {
   // 可根据 route.name 或 path 定制面包屑
     const map: Record<string, string> = {
@@ -135,10 +144,15 @@ const breadcrumbName = computed(() => {
     '/admin/guestbook': '留言管理',
     '/admin/stats': '统计',
     '/admin/users': '用户管理',
-    '/admin/settings': '系统设置'
+    '/admin/settings': '网站管理',
+    '/admin/services': '服务开关'
   }
   return map[route.path] || '仪表盘'
 })
+
+const syncSiteSettings = () => {
+  siteSettings.value = loadAdminSiteSettings()
+}
 
 const logout = () => {
   userStore.logout()
@@ -166,6 +180,11 @@ onMounted(() => {
   const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
   isDark.value = savedTheme === 'dark' || (!savedTheme && systemDark)
   applyTheme()
+  window.addEventListener('admin:site-settings-updated', syncSiteSettings)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('admin:site-settings-updated', syncSiteSettings)
 })
 </script>
 

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { recordPv } from '@/api/stats'
+import { loadAdminSiteSettings } from '@/utils/adminSiteSettings'
 
 // JWT 解析助手（仅解析 payload）
 function stripBearer(t: string) {
@@ -151,7 +152,8 @@ const routes: Array<RouteRecordRaw> = [
       { path: 'tag', name: 'AdminTag', component: () => import('@/views/admin/Tags.vue') },
       { path: 'articles/edit', name: 'AdminArticleEdit', component: () => import('@/views/admin/ArticleEditView.vue') },
       { path: 'users', name: 'AdminUsers', component: () => import('@/views/admin/Users.vue') },
-      { path: 'settings', name: 'AdminSettings', component: () => import('@/views/admin/Settings.vue') }
+      { path: 'settings', name: 'AdminSettings', component: () => import('@/views/admin/Settings.vue') },
+      { path: 'services', name: 'AdminServices', component: () => import('@/views/admin/Services.vue') }
     ]
   },
   // 必须放最后——匹配所有未定义路由，显示 404 页面
@@ -204,6 +206,19 @@ router.afterEach((to) => {
 router.beforeEach((to, _from, next) => {
   if (to.path.startsWith('/admin') || to.path === '/about/author') {
     if (isAdminFromLocalToken()) {
+      const services = loadAdminSiteSettings().services
+      if (to.path === '/admin/users' && !services.userManagementEnabled) {
+        next({ path: '/admin/services' })
+        return
+      }
+      if (to.path === '/admin/stats' && !services.statsServiceEnabled) {
+        next({ path: '/admin/services' })
+        return
+      }
+      if ((to.path === '/admin/comment' || to.path === '/admin/guestbook') && !services.interactionServiceEnabled) {
+        next({ path: '/admin/services' })
+        return
+      }
       next()
     } else {
       next({ path: '/' })

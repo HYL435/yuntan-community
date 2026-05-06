@@ -20,40 +20,7 @@ import java.util.Set;
 public class SiteStatServiceImpl extends ServiceImpl<SiteStatMapper, SiteStatDaily> implements ISiteStatService {
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final SiteStatMapper siteStatMapper;
     private final StringRedisTemplate redisTemplate;
-
-    /**
-     * 记录一次访问（带防刷）
-     *
-     * @param clientId 唯一标识（IP 或 userId 或 ip+ua）
-     */
-    private void recordVisit(String clientId) {
-        if (clientId == null || clientId.isBlank()) {
-            return;
-        }
-
-        // ===== 1. 今日 UV key =====
-        String uvKey = "site:uv:" + LocalDate.now();
-
-        // ===== 2. 防刷 key（1分钟内只算一次）=====
-        String dedupKey = "site:uv:dedup:" + clientId;
-
-        // 如果是第一次（1分钟内没有访问过），则设置 dedupKey 的值，并设置过期时间（1分钟）
-        Boolean firstVisit = stringRedisTemplate.opsForValue()
-                .setIfAbsent(dedupKey, "1", Duration.ofMinutes(1));
-
-        // 如果不是第一次（1分钟内重复访问），直接返回
-        if (Boolean.FALSE.equals(firstVisit)) {
-            return;
-        }
-
-        // ===== 3. 记录到 HyperLogLog =====
-        stringRedisTemplate.opsForHyperLogLog().add(uvKey, clientId);
-
-        // ===== 4. 设置过期时间（防止长期占用内存）=====
-        stringRedisTemplate.expire(uvKey, Duration.ofDays(2));
-    }
 
     /**
      * 获取今日访客数（UV）
@@ -91,14 +58,30 @@ public class SiteStatServiceImpl extends ServiceImpl<SiteStatMapper, SiteStatDai
         redisTemplate.opsForValue().set(hotScoreKey, String.valueOf(hotScore));
     }
 
+    /**
+     * 记录一次 PV
+     */
     @Override
     public void recordPv(String page, HttpServletRequest request) {
+
+        String clientId = getClientId(request);
 
         // 1. 校验 page 参数
         if (!isValidPage(page)) {
             return;
         }
         String today = LocalDate.now().toString();
+
+
+        // PV 防刷：同一 clientId 对同一 page，20 秒只记 1 次
+        String pvDedupKey = "site:pv:dedup:" + today + ":" + page + ":" + clientId;
+        // setIfAbsent 方法会尝试设置一个值，如果该 key 不存在，则设置成功并返回 true；如果该 key 已经存在，则设置失败并返回 false。
+        // 通过设置一个短暂的过期时间（20 秒），可以有效地防止同一 clientId 在短时间内对同一 page 进行重复访问，从而避免刷 PV。
+        Boolean firstHit = redisTemplate.opsForValue()
+                .setIfAbsent(pvDedupKey, "1", Duration.ofSeconds(20));
+        if (Boolean.FALSE.equals(firstHit)) {
+            return; // 20 秒内重复访问，不计 PV
+        }
 
         // 2. 记录 pv 数
         String pvKey = "site:pv:" + today;
@@ -109,7 +92,6 @@ public class SiteStatServiceImpl extends ServiceImpl<SiteStatMapper, SiteStatDai
         redisTemplate.opsForValue().increment(pvPageKey);
 
         // 3. uv 统计（带防刷）
-        String clientId = getClientId(request);
 
         String uvKey = "site:uv:" + today;
         // 记录到 HyperLogLog 中，HyperLogLog 会根据 clientId 自动去重
@@ -118,6 +100,7 @@ public class SiteStatServiceImpl extends ServiceImpl<SiteStatMapper, SiteStatDai
         // 设置过期时间（防止长期占用内存）
         redisTemplate.expire(pvKey, Duration.ofDays(7));
         redisTemplate.expire(uvKey, Duration.ofDays(7));
+        redisTemplate.expire(pvPageKey, Duration.ofDays(7));
 
     }
 

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { recordPv } from '@/api/stats'
 
 // JWT 解析助手（仅解析 payload）
 function stripBearer(t: string) {
@@ -167,6 +168,35 @@ const router = createRouter({
   scrollBehavior(_to, _from, savedPosition) {
     if (savedPosition) return savedPosition
     return { top: 0, left: 0 }
+  }
+})
+
+// 前台页面名称映射
+const FRONT_PAGE_SET = new Set([
+  'home', 'article', 'tag', 'message-board', 'about',
+  'category', 'topics', 'search', 'profile', 'bookshelf', 'toolbox', 'settings'
+])
+
+function resolvePageName(path: string): string | null {
+  if (path === '/') return 'home'
+  if (path.startsWith('/article/')) return 'article'
+  if (path.startsWith('/tag/')) return 'tag'
+  if (path === '/message-board') return 'message-board'
+  if (path.startsWith('/about')) return 'about'
+  if (path === '/categories') return 'category'
+  if (path === '/topics') return 'topics'
+  if (path === '/search') return 'search'
+  if (path === '/profile') return 'profile'
+  if (path === '/bookshelf') return 'bookshelf'
+  if (path === '/toolbox') return 'toolbox'
+  if (path === '/settings') return 'settings'
+  return null
+}
+
+router.afterEach((to) => {
+  const page = resolvePageName(to.path)
+  if (page && FRONT_PAGE_SET.has(page)) {
+    recordPv(page)
   }
 })
 

@@ -2,8 +2,7 @@ package com.yuntan.interaction.stat.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yuntan.interaction.stat.entity.SiteStatDaily;
-
-import java.time.LocalDate;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 全站 UV（访客数）统计服务
@@ -14,21 +13,16 @@ import java.time.LocalDate;
 
 public interface ISiteStatService extends IService<SiteStatDaily> {
 
-
-    /**
-     * 记录访客
-     *
-     * @param clientId 客户端唯一标识
-     */
-    void recordVisit(String clientId);
-
     /**
      * 获取今日 UV
      */
     long getTodayUv();
 
     /**
-     * 插入或更新统计数据
+     * 记录 PV
+     *
+     * @param page 页面名
+     * @param request 请求对象
      */
-    void insertOrUpdate(LocalDate date, long uv);
+    void recordPv(String page, HttpServletRequest request);
 }

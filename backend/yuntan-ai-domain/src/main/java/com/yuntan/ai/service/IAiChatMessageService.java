@@ -62,4 +62,8 @@ public interface IAiChatMessageService extends IService<AiChatMessage> {
      */
     Integer getNextSequenceNo(Long sessionId);
 
+    /**
+     * 更新 assistant 聊天消息失败
+     */
+    void updateAssistantFailed(Long assistantMessageId, String message);
 }

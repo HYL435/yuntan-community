@@ -46,7 +46,9 @@ class OpenAICompatibleProvider(BaseChatProvider):
                 "content": req.message
             }
         ]
- 
+
+
+
     def build_payload(self, req: ChatStreamRequest) -> dict:
         """
         构建发送给 LLM 服务的 JSON 载荷（payload）。
@@ -61,6 +63,8 @@ class OpenAICompatibleProvider(BaseChatProvider):
             "stream": True  # 开启流式返回，服务器会以逐步增量（delta）发送响应
         }
 
+
+
     def build_headers(self) -> dict:
         """
         构建 HTTP 请求头。
@@ -73,6 +77,7 @@ class OpenAICompatibleProvider(BaseChatProvider):
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
+
 
     async def stream_chat(
         self,
@@ -109,6 +114,10 @@ class OpenAICompatibleProvider(BaseChatProvider):
         # 连接超时（connect）10秒，读取超时（read）60秒，写入超时（write）10秒，连接池超时（pool）5秒
         timeout = httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=5.0)
 
+        # 定义一个用于存储完整文本的列表
+        completion_text_parts: list[str] = []
+        usage_send = False  # 标记是否已经发送过 usage 信息
+
         # 使用 httpx 的异步客户端进行网络请求
         # teaching: async with 用法类似于 with，但可用于异步上下文管理器，保证资源正确释放（如连接关闭）
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -135,6 +144,40 @@ class OpenAICompatibleProvider(BaseChatProvider):
 
                 # response.aiter_lines() 是一个异步迭代器，会逐行产出服务器发送的数据（常见于 SSE 或类似 OpenAI 的流）
                 # teaching: async for 表示在异步迭代器上逐步迭代并且可以在每一步使用 await
+                """
+                服务端返回示例：
+                [
+                  {
+                    "type": "stream_chunk",
+                    "id": "chatcmpl-xxx",
+                    "object": "chat.completion.chunk",
+                    "choices": [
+                      {
+                        "delta": { "content": "Hello" },
+                        "index": 0,
+                        "finish_reason": null
+                      }
+                    ]
+                  },
+                  {
+                    "type": "final",
+                    "id": "chatcmpl-xxx",
+                    "object": "chat.completion",
+                    "choices": [
+                      {
+                        "delta": {},
+                        "index": 0,
+                        "finish_reason": "stop"
+                      }
+                    ],
+                    "usage": {
+                      "prompt_tokens": 10,
+                      "completion_tokens": 20,
+                      "total_tokens": 30
+                    }
+                  }
+                ]                
+                """
                 async for line in response.aiter_lines():
                     # 有时服务器可能发送空行，跳过它们
                     if not line:
@@ -155,6 +198,18 @@ class OpenAICompatibleProvider(BaseChatProvider):
                         # 教学：解析可能失败（例如服务器发送非 JSON 行），此处选择忽略该行并继续循环
                         continue
 
+                    # 优先解析厂商返回的 usage
+                    usage = data.get("usage")
+                    if usage:
+                        # 标记厂商返回了 usage 信息，后续不再发送我们自己统计的 usage
+                        usage_send = True
+                        yield StreamEvent(
+                            type="usage",
+                            prompt_tokens=usage.get("prompt_tokens"),
+                            completion_tokens=usage.get("completion_tokens"),
+                            total_tokens=usage.get("total_tokens")
+                        )
+
                     # data 中通常包含 choices 字段（OpenAI 风格），取第一个 choice
                     choices = data.get("choices") or []
                     if not choices:
@@ -167,15 +222,36 @@ class OpenAICompatibleProvider(BaseChatProvider):
 
                     # 若 delta 中包含 content，则这是增量文本，产出一个 delta 事件
                     content = delta.get("content")
+
                     if content:
+                        # 教学：每当接收到新的增量文本时，立即产出一个 StreamEvent，调用方可以实时显示这些增量内容
                         yield StreamEvent(
                             type="delta",
                             content=content
                         )
+                        # 同时将增量文本添加到 completion_text_parts 列表中，以便在生成完成后可以获得完整文本（如果需要）
+                        completion_text_parts.append(content)
+
 
                     # finish_reason 表示该 choice 是否完成以及完成原因（如 stop/length 等）
                     finish_reason = choice.get("finish_reason")
                     if finish_reason:
+
+                        # 如果没有发送过 usage，则发送我们自己的 usage
+                        if not usage_send:
+                            # 提示词的 token 数量
+                            prompt_tokens = estimate_tokens(req.message)
+                            # 这里我们简单地将增量文本列表中的所有文本拼接起来进行 token 估算，实际情况可能需要更复杂的处理（如考虑系统消息、上下文等）
+                            completion_tokens = estimate_tokens("".join(completion_text_parts))
+                            # 总 token 数量
+                            total_tokens = prompt_tokens + completion_tokens
+                            yield StreamEvent(
+                                type="usage",
+                                prompt_tokens=prompt_tokens,
+                                completion_tokens=completion_tokens,
+                                total_tokens=total_tokens
+                            )
+
                         # 若有 finish_reason，则产出 done 事件并结束生成器
                         yield StreamEvent(
                             type="done",
@@ -183,9 +259,46 @@ class OpenAICompatibleProvider(BaseChatProvider):
                         )
                         return  # 结束整个函数，资源会被 async with 正确释放
 
-        # 如果循环正常结束（非异常），为了保证调用方能收到 done 事件，这里再产出一次 done。
+
+        # 如果循环正常结束（非异常），需要再输出一次 usage（如果之前没有发送过），以确保调用方能收到完整的使用统计信息。
+        if not usage_send:
+            prompt_tokens = estimate_tokens(req.message)
+            completion_tokens = estimate_tokens("".join(completion_text_parts))
+            total_tokens = prompt_tokens + completion_tokens
+            yield StreamEvent(
+                type="usage",
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens
+            )
+        # 为了保证调用方能收到 done 事件，这里再产出一次 done。
         # finish_reason 设为 "stop" 表示正常停止。
         yield StreamEvent(
             type="done",
             finish_reason="stop"
         )
+
+
+def estimate_tokens(text: str | None) -> int:
+    """
+    第一版粗略 token 估算
+    中文、英文混合场景下不精确，用于早期统计
+    """
+    if not text:
+        return 0
+
+    # 统计中文字符个数
+    chinese_count = 0
+    # 统计其他字符个数
+    other_count = 0
+
+    # 遍历字符串中的每个字符
+    for ch in text:
+        if '\u4e00' <= ch <= '\u9fff':
+            chinese_count += 1
+        # 这里我们简单地将非中文且非空白的字符都算作一个 token，实际情况可能更复杂（如标点、特殊符号等）
+        elif not ch.isspace():
+            other_count += 1
+
+    # 返回中文字符个数加上其他字符个数的最大值
+    return chinese_count + max(1, other_count // 4)  # 粗略估算：每4个非中文字符算作1个token

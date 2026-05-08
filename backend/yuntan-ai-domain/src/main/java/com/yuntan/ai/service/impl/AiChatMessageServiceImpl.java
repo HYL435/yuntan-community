@@ -18,10 +18,6 @@ public class AiChatMessageServiceImpl extends ServiceImpl<AiChatMessageMapper, A
     private final AiChatMessageMapper aiChatMessageMapper;
 
 
-
-
-
-
     // 保存用户聊天消息
     public AiChatMessage saveUSerMessage(
             Long sessionId,
@@ -137,6 +133,20 @@ public class AiChatMessageServiceImpl extends ServiceImpl<AiChatMessageMapper, A
         } else {
             return lastMessage.getSequenceNo() + 1; // 否则在当前最大序列号基础上加1
         }
+    }
+
+    /**
+     * 更新 assistant 聊天消息失败
+     */
+    @Override
+    public void updateAssistantFailed(Long assistantMessageId, String errorMessage) {
+        AiChatMessage update = AiChatMessage.builder()
+                .id(assistantMessageId)
+                .status(AiMessageStatus.FAILED.getCode())
+                .errorMessage(errorMessage)
+                .build();
+
+        aiChatMessageMapper.updateById(update);
     }
 
 

@@ -30,10 +30,12 @@ class MockChatProvider(BaseChatProvider):
 
         chunks = [
             "你好，\n",
-            "我收到你的问题：",
+            "以下是 mock 模型的测试输出内容：\n",
+            "我成功收到你了的问题：",
             req.message,
             "。\n",
-            "这是 mock 模型的测试输出。"
+            "欢迎使用 AI 助手！",
+            "快去试试其他模型吧！",
         ]
         # 2. delta 事件：模拟模型处理过程，每次返回一个片段
         for chunk in chunks:

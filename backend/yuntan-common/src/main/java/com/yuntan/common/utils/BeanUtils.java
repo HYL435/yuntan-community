@@ -1,5 +1,6 @@
 package com.yuntan.common.utils;
 
+
 import cn.hutool.core.bean.BeanUtil;
 
 import java.util.List;
@@ -62,7 +63,7 @@ public class BeanUtils extends BeanUtil {
         if (source == null) {
             return null;
         }
-        return BeanUtil.toBean(source, clazz);
+        return cn.hutool.core.bean.BeanUtil.toBean(source, clazz);
     }
 
     public static <R> Map<String, Object> dtoToMap(R source) {

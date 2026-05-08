@@ -52,4 +52,13 @@ public class AiStreamEvent {
                 .sessionId(sessionId)
                 .build();
     }
+
+    // 工厂方法，创建一个错误事件，用于通知前端发生了错误
+    public static AiStreamEvent error(String code ,String message) {
+        return AiStreamEvent.builder()
+                .type("error")
+                .code(code)
+                .message(message)
+                .build();
+    }
 }

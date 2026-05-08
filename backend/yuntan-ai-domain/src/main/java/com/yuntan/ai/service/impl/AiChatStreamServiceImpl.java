@@ -5,11 +5,9 @@ import com.yuntan.ai.dto.AiChatStreamDTO;
 import com.yuntan.ai.dto.ChatPrepareResultDTO;
 import com.yuntan.ai.event.AiStreamEvent;
 import com.yuntan.ai.event.PythonStreamEvent;
+import com.yuntan.ai.lock.AiChatSessionLock;
 import com.yuntan.ai.request.PythonChatStreamRequest;
-import com.yuntan.ai.service.AiChatPrepareService;
-import com.yuntan.ai.service.AiChatStreamService;
-import com.yuntan.ai.service.IAiChatMessageService;
-import com.yuntan.ai.service.IAiChatSessionService;
+import com.yuntan.ai.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -18,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 
@@ -30,10 +29,13 @@ public class AiChatStreamServiceImpl implements AiChatStreamService {
     private final IAiChatSessionService aiChatSessionService;
     private final IAiChatMessageService aiChatMessageService;
     private final AiChatPrepareService aiChatPrepareService;
+    private final AiRateLimitService aiRateLimitService;
 
     private final WebClient aiWebClient;
     // 创建一个ObjectMapper对象，用于将JSON字符串转为PythonStreamEvent对象
     private final ObjectMapper objectMapper;
+
+    private final AiChatSessionLock aiChatSessionLock;
 
 
     /**
@@ -44,8 +46,48 @@ public class AiChatStreamServiceImpl implements AiChatStreamService {
      */
     public Flux<ServerSentEvent<AiStreamEvent>> streamChat(AiChatStreamDTO aiChatStreamDTO) {
 
+        // 判断是否模拟请求，如果是模拟请求则跳过限流检查，直接进行预处理和发送请求给Python服务
+        if (!Objects.equals(aiChatStreamDTO.getModel(), "mock")) {
+            try {
+                // 限流检查，判断用户是否超出请求限制，如果超出则抛出异常，提示用户请求过于频繁
+                aiRateLimitService.checkUserLimit();
+                // 限流检查，判断Ip地址是否超出请求限制，如果超出则抛出异常，提示用户请求过于频繁
+                aiRateLimitService.checkIpLimit();
+            } catch (Exception e) {
+                return Flux.just(
+                        ServerSentEvent.<AiStreamEvent>builder()
+                                .event("error")
+                                .data(AiStreamEvent.error(
+                                        "RATE_LIMIT",
+                                        e.getMessage()))
+                                .build()
+                );
+            }
+        }
+
         // 预处理，获取会话ID、用户ID、消息ID等必要的信息，并进行相关的数据库操作，比如创建消息记录，更新消息状态等
         ChatPrepareResultDTO prepareResult = aiChatPrepareService.prepareChat(aiChatStreamDTO);
+
+        Long sessionId = prepareResult.getSessionId();
+        Long assistantMessageId = prepareResult.getAssistantMessageId();
+        String requestId = prepareResult.getRequestId();
+
+        boolean lock = aiChatSessionLock.tryLockSessionGenerating(sessionId, requestId);
+        if (!lock) {
+            aiChatMessageService.updateAssistantFailed(
+                    assistantMessageId,
+                    "当前会话正在生成中，请稍后再试"
+            );
+
+            return Flux.just(
+                    ServerSentEvent.<AiStreamEvent>builder()
+                            .event("error")
+                            .data(AiStreamEvent.error(
+                                    "SESSION_GENERATING",
+                                    "当前会话正在生成中，请稍后再试"))
+                            .build()
+            );
+        }
 
         // 构建发送给Python服务的DTO
         PythonChatStreamRequest pythonRequest = new PythonChatStreamRequest(
@@ -144,6 +186,10 @@ public class AiChatStreamServiceImpl implements AiChatStreamService {
                             prepareResult.getAssistantMessageId(),
                             e.getMessage()
                     );
+                })
+                .doFinally(signalType -> {
+                    // 无论流是正常结束还是异常结束，都会触发这个回调，我们可以在这里进行一些清理工作，比如释放锁等
+                    aiChatSessionLock.unlockSessionGenerating(sessionId, requestId);
                 });
 
         // 返回最终的SSE流，包含session和python的SSE流，前端可以根据事件类型进行相应的处理，比如显示会话信息，展示增量数据，显示错误提示等
@@ -193,4 +239,6 @@ public class AiChatStreamServiceImpl implements AiChatStreamService {
             return fallback;
         }
     }
+
+
 }

@@ -27,6 +27,11 @@ public class AiChatPrepareServiceImpl implements AiChatPrepareService {
     private final IAiChatSessionService aiChatSessionService;
     private final IAiChatMessageService aiChatMessageService;
 
+    /**
+     * 准备聊天会话和消息
+     * @param aiChatStreamDTO
+     * @return
+     */
     @Transactional(rollbackFor = Exception.class)
     public ChatPrepareResultDTO prepareChat(AiChatStreamDTO aiChatStreamDTO) {
 

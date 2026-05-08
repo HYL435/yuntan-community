@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from starlette.responses import StreamingResponse
 
 from app.core.exceptions import AIServiceException
+from app.core.limit import ConcurrencyLimiter
 # 导入请求/响应模型
 from app.schemas.chat import ChatStreamRequest, ChatResponse, SummaryRequest, SummaryResponse, StreamEvent
 from app.schemas.common import ApiResponse
@@ -16,6 +17,8 @@ router = APIRouter(prefix="/v1/chat", tags=["chat"])
 
 # 创建服务层实例
 chat_service = ChatService()
+# 创建限流器
+chat_limiter = ConcurrencyLimiter(max_concurrent=20)
 
 """
 将 StreamEvent 转换为 SSE 格式的字符串，供前端消费
@@ -37,6 +40,35 @@ def to_sse(event: StreamEvent) -> str:
 路由层的流式生成器
 """
 async def stream_generator(req: ChatStreamRequest):
+
+    if not req.message or not req.message.strip():
+        yield to_sse(StreamEvent(
+            type="error",
+            content="EMPTY_MESSAGE: Please provide a valid message.",
+            message="消息为空，请重新输入。"
+        ))
+
+    if len(req.message) > 8000:
+        yield to_sse(StreamEvent(
+            type="error",
+            content=f"MESSAGE_TOO_LONG: Message exceeds maximum length of 8000 characters.",
+            message="消息内容过长"
+        ))
+        return
+
+    # 获取限流锁
+    acquired = await chat_limiter.acquire()
+
+    if not acquired:
+        # 如果无法获取锁，说明当前并发数已经达到了最大值，直接返回一个错误事件
+        error_event = StreamEvent(
+            type="error",
+            content=f"AI_SERVICE_BUSY: Too many concurrent requests. Please try again later.",
+            message="当前请求过多，请稍后再试。"
+        )
+        yield to_sse(error_event)
+        return
+
     # 调用服务层获取提供者实例
     try:
         # 获取提供者实例
@@ -55,6 +87,9 @@ async def stream_generator(req: ChatStreamRequest):
         )
         yield error_event
 
+    finally:
+        # 释放限流锁
+        chat_limiter.release()
 
 @router.post("/completions/stream", response_model=ApiResponse[ChatStreamRequest])
 async def chat(req: ChatStreamRequest):

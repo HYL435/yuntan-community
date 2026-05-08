@@ -2,6 +2,7 @@ package com.yuntan.interaction.stat.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yuntan.common.context.BaseContext;
+import com.yuntan.common.utils.BaseUtil;
 import com.yuntan.interaction.stat.entity.SiteStatDaily;
 import com.yuntan.interaction.stat.mapper.SiteStatMapper;
 import com.yuntan.interaction.stat.service.ISiteStatService;
@@ -124,7 +125,7 @@ public class SiteStatServiceImpl extends ServiceImpl<SiteStatMapper, SiteStatDai
         }
 
         // 未登录用户，使用 IP + User-Agent 作为标识
-        String ip = getIp(request);
+        String ip = BaseUtil.getClientIp(request);
         String ua = request.getHeader("User-Agent");
         if (ip != null && ua != null) {
             // 使用 MD5 加密 IP + User-Agent，生成一个固定长度的字符串，避免过长的 key
@@ -133,25 +134,6 @@ public class SiteStatServiceImpl extends ServiceImpl<SiteStatMapper, SiteStatDai
 
         // 最后兜底，使用 IP 作为标识
         return ip;
-    }
-
-    // 获取客户端 IP 地址
-    private String getIp(HttpServletRequest request) {
-
-        // 先尝试从 X-Forwarded-For 头获取（可能有多个 IP，取第一个），再尝试 X-Real-IP，最后使用 request.getRemoteAddr()
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip != null && !ip.isBlank()) {
-            return ip.split(",")[0].trim();
-        }
-        // 尝试 X-Real-IP 头获取
-        ip = request.getHeader("X-Real-IP");
-        if (ip != null && !ip.isBlank()) {
-            return ip.trim();
-        }
-
-        // 最后使用 request.getRemoteAddr() 获取 IP 地址
-        return request.getRemoteAddr();
-
     }
 
 }

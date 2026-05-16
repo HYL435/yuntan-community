@@ -25,4 +25,10 @@ public interface ISiteStatService extends IService<SiteStatDaily> {
      * @param request 请求对象
      */
     void recordPv(String page, HttpServletRequest request);
+
+    /**
+     * 近 7 日接口统计
+     * @return
+     */
+    Long InterfaceStaFor7();
 }

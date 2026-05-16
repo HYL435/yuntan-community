@@ -119,7 +119,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '@/api/http'
 import { useIsDark } from '@/composables/useIsDark'
-import { getAdminStats } from '@/api/stats'
+import { getInterfaceStaFor7 } from '@/api/stats'
 import { getAdminAnnouncement } from '@/api/announcement'
 
 type ArticleRow = {
@@ -153,7 +153,7 @@ const formatNumber = (value: number | null) => (value == null ? '--' : value.toL
 const metricCards = computed(() => [
   { label: '总文章数', value: formatNumber(articleTotal.value), hint: '已创建文章总量' },
   { label: '用户总数', value: formatNumber(userTotal.value), hint: '后台分页统计结果' },
-  { label: '近7日访问', value: formatNumber(weekVisits.value), hint: '来源于统计总览接口' },
+  { label: '近7日访问', value: formatNumber(weekVisits.value), hint: '来源于近七日接口统计' },
   { label: '待处理总数', value: formatNumber(pending.comment + pending.danmaku), hint: '评论与留言待审核' },
 ])
 
@@ -228,7 +228,7 @@ const loadDashboardData = async () => {
     http.get('/admin/comments', { params: { pageNo: 1, pageSize: 1, status: 0 } }),
     http.get('/admin/danmaku/page', { params: { pageNo: 1, pageSize: 1, approved: 0 } }),
     http.get('/admin/timeline/list', { params: { pageNo: 1, pageSize: 1, status: 0 } }),
-    getAdminStats(),
+    getInterfaceStaFor7(),
     getAdminAnnouncement(),
   ])
 
@@ -283,9 +283,7 @@ const loadDashboardData = async () => {
   }
 
   if (statsRes.status === 'fulfilled') {
-    const stats = statsRes.value || {}
-    const visits = Array.isArray(stats?.visits) ? stats.visits : Array.isArray(stats?.series?.[0]?.data) ? stats.series[0].data : []
-    weekVisits.value = visits.slice(-7).reduce((sum: number, n: any) => sum + (Number(n) || 0), 0)
+    weekVisits.value = statsRes.value
   } else {
     apiHealthy.value = false
     weekVisits.value = null

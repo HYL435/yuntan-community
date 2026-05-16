@@ -16,6 +16,19 @@ export const getAdminStats = async (): Promise<AdminStatsResponse> => {
   return res.data || {}
 }
 
+export const getInterfaceStaFor7 = async (): Promise<number | null> => {
+  const res = await http.get('/admin/stat/interface/for7')
+  const body = res?.data ?? res
+
+  const direct = Number(body)
+  if (Number.isFinite(direct)) return direct
+
+  const payload = Number(body?.data)
+  if (Number.isFinite(payload)) return payload
+
+  return null
+}
+
 export const getArticleCount = async (): Promise<number | null> => {
   const res = await http.get('/front/articles/count')
   const body = res?.data ?? res
@@ -52,6 +65,7 @@ export const recordPv = async (page: string): Promise<void> => {
 
 export default {
   getAdminStats,
+  getInterfaceStaFor7,
   getArticleCount,
   getTodayHot,
   recordPv

@@ -1,5 +1,6 @@
 package com.yuntan.interaction.stat.service.impl;
 
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yuntan.common.context.BaseContext;
 import com.yuntan.common.utils.BaseUtil;
@@ -22,6 +23,7 @@ public class SiteStatServiceImpl extends ServiceImpl<SiteStatMapper, SiteStatDai
 
     private final StringRedisTemplate stringRedisTemplate;
     private final StringRedisTemplate redisTemplate;
+    private final SiteStatMapper siteStatMapper;
 
     /**
      * 获取今日访客数（UV）
@@ -104,6 +106,34 @@ public class SiteStatServiceImpl extends ServiceImpl<SiteStatMapper, SiteStatDai
         redisTemplate.expire(pvPageKey, Duration.ofDays(7));
 
     }
+
+    /**
+     * 近七日接口信息统计
+     * @return
+     */
+    @Override
+    public Long InterfaceStaFor7() {
+
+        // 计算开始与结束时间
+        LocalDate today = LocalDate.now();
+        LocalDate start = today.minusDays(7);
+        LocalDate end = today.plusDays(1);
+
+        // 当日的接口统计数在redis中
+        String key = "site:pv:" + today;
+        String todayCountStr = stringRedisTemplate.opsForValue().get(key);
+        Long todayCount = Long.parseLong(todayCountStr != null ? todayCountStr : "0");
+
+        // 构建查询语句，得到前 6 日接口访问总和
+        Long historyCount = new LambdaQueryChainWrapper<>(siteStatMapper)
+                .between(SiteStatDaily::getStatDate, start, end)
+                .count();
+
+        return todayCount + historyCount;
+    }
+
+
+
 
     // 校验 page 参数
     private boolean isValidPage(String page) {
